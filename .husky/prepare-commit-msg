@@ -1,0 +1,5 @@
+if [ "$2" = "message" ] || [ "$2" = "commit" ] || [ "$2" = "merge" ]; then
+  exit 0
+fi
+
+exec < /dev/tty && npx cz --hook || true
