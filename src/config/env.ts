@@ -5,9 +5,9 @@ export const envSchema = z.object({
     .enum(['development', 'production', 'test'])
     .default('development'),
   PORT: z.coerce.number().int().positive().default(3000),
-  DATABASE_URL: z.url(),
+  DATABASE_URL: z.string().min(1),
   JWT_SECRET: z.string().min(32),
-  SUPABASE_URL: z.url(),
+  SUPABASE_URL: z.string().min(1),
   SUPABASE_ANON_KEY: z.string().min(1),
 });
 
