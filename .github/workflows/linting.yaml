@@ -10,9 +10,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20.20.0
+          node-version: 24.15.0
       - run: npm ci
-      - run: npm run lint:prettier:check
+      - run: npm run format
   eslint:
     name: ESLint
     runs-on: ubuntu-latest
@@ -22,7 +22,7 @@ jobs:
         with:
           node-version: 24.15.0
       - run: npm ci
-      - run: npm run lint:eslint:check
+      - run: npm run lint
   commitlint:
     name: Commitlint
     runs-on: ubuntu-latest
