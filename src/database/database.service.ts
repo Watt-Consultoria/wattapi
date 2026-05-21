@@ -11,7 +11,7 @@ export class DatabaseService implements OnModuleDestroy {
   constructor(private readonly env: EnvService) {
     this.client = createClient(
       this.env.get('SUPABASE_URL'),
-      this.env.get('SUPABASE_ANON_KEY'),
+      this.env.get('SUPABASE_PUBLIC_KEY'),
     );
     this.pool = new Pool({ connectionString: this.env.get('DATABASE_URL') });
   }

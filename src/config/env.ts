@@ -9,6 +9,7 @@ export const envSchema = z.object({
   JWT_SECRET: z.string().min(32),
   SUPABASE_URL: z.url(),
   SUPABASE_ANON_KEY: z.string().min(1),
+  SUPABASE_PUBLIC_KEY: z.string().min(1),
 });
 
 export type Env = z.infer<typeof envSchema>;

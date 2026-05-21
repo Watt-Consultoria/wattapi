@@ -1,8 +1,13 @@
+import orchestrator from '../../lib/orchestrator';
 import { StatusResponse } from './status.service';
 
 const STATUS_URL = 'http://localhost:3000/status';
 
 describe('GET /status', () => {
+  beforeAll(async () => {
+    await orchestrator.waitForAllServices();
+  });
+
   it('should return HTTP 200', async () => {
     const res = await fetch(STATUS_URL);
     expect(res.status).toBe(200);
