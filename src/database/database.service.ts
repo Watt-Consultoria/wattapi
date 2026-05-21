@@ -9,10 +9,17 @@ export class DatabaseService implements OnModuleDestroy {
   private readonly pool: Pool;
 
   constructor(private readonly env: EnvService) {
-    this.client = createClient(
-      this.env.get('SUPABASE_URL'),
-      this.env.get('SUPABASE_PUBLIC_KEY'),
-    );
+    try {
+      this.client = createClient(
+        this.env.get('SUPABASE_URL'),
+        this.env.get('SUPABASE_PUBLIC_KEY'),
+      );
+    } catch (error) {
+      throw new Error(
+        `Failed to initialize Supabase client: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+
     this.pool = new Pool({ connectionString: this.env.get('DATABASE_URL') });
   }
 
