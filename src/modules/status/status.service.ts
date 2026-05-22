@@ -37,7 +37,8 @@ export class StatusService {
           },
         },
       };
-    } catch {
+    } catch (error) {
+      console.error('Error fetching database stats:', error);
       throw new InternalServerErrorException('Failed to fetch database stats');
     }
   }
