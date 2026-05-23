@@ -15,6 +15,7 @@ export interface UserResponse {
   cpf: string;
   created_at: string;
   updated_at: string;
+  inactive: boolean;
 }
 
 interface UserRow {
@@ -26,6 +27,7 @@ interface UserRow {
   cpf: string;
   created_at: Date;
   updated_at: Date;
+  inactive: boolean;
 }
 
 function toResponse(row: UserRow): UserResponse {
@@ -42,7 +44,7 @@ export class UsersService {
 
   async findAll(): Promise<UserResponse[]> {
     const result = await this.db.query<UserRow>(
-      'SELECT id, email, name, role, sector, cpf, created_at, updated_at FROM users ORDER BY created_at ASC',
+      'SELECT id, email, name, role, sector, cpf, created_at, updated_at, inactive FROM users WHERE inactive = false ORDER BY created_at ASC',
     );
     return result.rows.map(toResponse);
   }
@@ -66,7 +68,7 @@ export class UsersService {
 
   async findOne(id: string): Promise<UserResponse> {
     const result = await this.db.query<UserRow>(
-      'SELECT id, email, name, role, sector, cpf, created_at, updated_at FROM users WHERE id = $1',
+      'SELECT id, email, name, role, sector, cpf, created_at, updated_at FROM users WHERE id = $1 AND inactive = false',
       [id],
     );
 
