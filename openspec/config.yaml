@@ -18,3 +18,8 @@ schema: spec-driven
 #       - Always include a "Non-goals" section
 #     tasks:
 #       - Break tasks into chunks of max 2 hours
+
+rules:
+  tasks:
+    - Always add an initial TDD task to any implementation and guarantee it fails before writing implementation code.
+    - For implementation tasks, always include a "Testing" section with
