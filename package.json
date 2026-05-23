@@ -9,7 +9,7 @@
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
-    "start:dev": "nest start --watch",
+    "start:dev": "npm run services:up && npm run services:db:reset && nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix --max-warnings 0",
@@ -22,6 +22,8 @@
     "services:db:start": "supabase start -x gotrue,realtime,storage-api,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor --workdir ./src/database/",
     "services:db:stop": "supabase stop --workdir ./src/database/",
     "services:db:reset": "supabase db reset --workdir ./src/database/",
+    "services:migration:create": "supabase migration new --workdir ./src/database/",
+    "services:migration:up": "supabase migration up --workdir ./src/database/",
     "services:up": "npm run services:db:start"
   },
   "dependencies": {
