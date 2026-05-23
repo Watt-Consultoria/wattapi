@@ -6,6 +6,8 @@ import { EnvService } from '../../config/env.service';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtGuard } from './jwt.guard';
+import { RoutePolicyGuard } from './route-policy.guard';
+import { RoleSerializerInterceptor } from './role-serializer.interceptor';
 
 @Module({
   imports: [
@@ -20,7 +22,18 @@ import { JwtGuard } from './jwt.guard';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtGuard],
-  exports: [JwtGuard, AuthService],
+  providers: [
+    AuthService,
+    JwtGuard,
+    RoutePolicyGuard,
+    RoleSerializerInterceptor,
+  ],
+  exports: [
+    JwtModule,
+    JwtGuard,
+    AuthService,
+    RoutePolicyGuard,
+    RoleSerializerInterceptor,
+  ],
 })
 export class AuthModule {}

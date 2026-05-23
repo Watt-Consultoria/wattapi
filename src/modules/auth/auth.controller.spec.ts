@@ -74,24 +74,19 @@ describe('GET /auth/me', () => {
   });
 
   it('should return HTTP 401 when user is inactive', async () => {
-    const createRes = await fetch('http://localhost:3000/users', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: 'inactive.auth@watt.com',
-        name: 'Inactive Auth User',
-        role: 'consultor',
-        sector: 'comercial',
-        cpf: '77766655544',
-      }),
+    // seededUsers[5] is inactive.auth@watt.com (seeded as active, deleted here)
+    const inactiveUser = seededUsers[5];
+    const presidenteToken = signToken({
+      email: seededUsers[4].email, // lucia.presidente
+      sub: 'test-sub',
     });
-    const created = (await createRes.json()) as SeedUser;
-    await fetch(`http://localhost:3000/users/${created.id}`, {
+    await fetch(`http://localhost:3000/users/${inactiveUser.id}`, {
       method: 'DELETE',
+      headers: { Authorization: `Bearer ${presidenteToken}` },
     });
 
     const token = signToken({
-      email: 'inactive.auth@watt.com',
+      email: inactiveUser.email,
       sub: 'test-sub',
     });
     const res = await fetch(BASE_URL, {

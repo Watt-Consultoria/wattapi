@@ -1,3 +1,5 @@
+## MODIFIED Requirements
+
 ### Requirement: Create a new user via POST /users
 The system SHALL expose a `POST /users` endpoint that accepts a JSON body, validates the input, persists a new user record, and returns the created user with HTTP 201.
 

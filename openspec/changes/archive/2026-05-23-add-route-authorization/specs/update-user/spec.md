@@ -1,3 +1,5 @@
+## MODIFIED Requirements
+
 ### Requirement: Atualizar parcialmente um usuário via PATCH /users/:id
 O sistema SHALL expor `PATCH /users/:id` que aceita um body JSON com um subconjunto dos campos editáveis, atualiza apenas os campos fornecidos e retorna o usuário completo atualizado com HTTP 200.
 
