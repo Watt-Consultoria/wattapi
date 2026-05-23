@@ -3,8 +3,15 @@ import { AppConfigModule } from './config/config.module';
 import { DatabaseModule } from './database/database.module';
 import { StatusModule } from './modules/status/status.module';
 import { UsersModule } from './modules/users/users.module';
+import { AuthModule } from './modules/auth/auth.module';
 
 @Module({
-  imports: [AppConfigModule, DatabaseModule, StatusModule, UsersModule],
+  imports: [
+    AppConfigModule,
+    DatabaseModule,
+    StatusModule,
+    UsersModule,
+    AuthModule,
+  ],
 })
 export class AppModule {}

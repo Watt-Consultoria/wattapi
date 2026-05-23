@@ -15,7 +15,6 @@ export interface UserResponse {
   cpf: string;
   created_at: string;
   updated_at: string;
-  inactive: boolean;
 }
 
 interface UserRow {
