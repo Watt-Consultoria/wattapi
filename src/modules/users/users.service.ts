@@ -1,5 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
+import { CreateUserDto } from './dto/create-user.dto';
 
 export interface UserResponse {
   id: string;
@@ -40,6 +45,23 @@ export class UsersService {
       'SELECT id, email, name, role, sector, cpf, created_at, updated_at FROM users ORDER BY created_at ASC',
     );
     return result.rows.map(toResponse);
+  }
+
+  async create(dto: CreateUserDto): Promise<UserResponse> {
+    try {
+      const result = await this.db.query<UserRow>(
+        'INSERT INTO users (email, name, role, sector, cpf) VALUES ($1, $2, $3, $4, $5) RETURNING id, email, name, role, sector, cpf, created_at, updated_at',
+        [dto.email, dto.name, dto.role, dto.sector, dto.cpf],
+      );
+      return toResponse(result.rows[0]);
+    } catch (err: unknown) {
+      if ((err as { code?: string })?.code === '23505') {
+        const detail: string = (err as { detail?: string })?.detail ?? '';
+        const field = detail.includes('email') ? 'email' : 'cpf';
+        throw new ConflictException(`A user with this ${field} already exists`);
+      }
+      throw err;
+    }
   }
 
   async findOne(id: string): Promise<UserResponse> {

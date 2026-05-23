@@ -155,3 +155,139 @@ describe('GET /users/:user_id', () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe('POST /users', () => {
+  const validPayload = {
+    email: 'novo.usuario@watt.com',
+    name: 'Novo Usuario',
+    role: 'gerente',
+    sector: 'comercial',
+    cpf: '55566677788',
+  };
+
+  it('should return HTTP 201 and the created user with the correct shape', async () => {
+    const res = await fetch(BASE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(validPayload),
+    });
+    const body = (await res.json()) as SeedUser;
+
+    expect(res.status).toBe(201);
+    expect(body).toHaveProperty('id');
+    expect(body).toHaveProperty('email', validPayload.email);
+    expect(body).toHaveProperty('name', validPayload.name);
+    expect(body).toHaveProperty('role', validPayload.role);
+    expect(body).toHaveProperty('sector', validPayload.sector);
+    expect(body).toHaveProperty('cpf', validPayload.cpf);
+    expect(body).toHaveProperty('created_at');
+    expect(body).toHaveProperty('updated_at');
+  });
+
+  it('should return created_at and updated_at as valid ISO 8601 strings', async () => {
+    const res = await fetch(BASE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...validPayload,
+        email: 'iso.test@watt.com',
+        cpf: '44455566677',
+      }),
+    });
+    const body = (await res.json()) as SeedUser;
+
+    expect(res.status).toBe(201);
+    expect(new Date(body.created_at).toISOString()).toBe(body.created_at);
+    expect(new Date(body.updated_at).toISOString()).toBe(body.updated_at);
+  });
+
+  it('should default role to "consultor" when omitted', async () => {
+    //eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { role: _role, ...withoutRole } = validPayload;
+    const res = await fetch(BASE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...withoutRole,
+        email: 'sem.role@watt.com',
+        cpf: '99988877766',
+      }),
+    });
+    const body = (await res.json()) as SeedUser;
+
+    expect(res.status).toBe(201);
+    expect(body.role).toBe('consultor');
+  });
+
+  it('should return HTTP 400 when a required field is missing', async () => {
+    //eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { email: _email, ...withoutEmail } = validPayload;
+    const res = await fetch(BASE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(withoutEmail),
+    });
+
+    expect(res.status).toBe(400);
+  });
+
+  it('should return HTTP 400 for an invalid email format', async () => {
+    const res = await fetch(BASE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...validPayload, email: 'not-an-email' }),
+    });
+
+    expect(res.status).toBe(400);
+  });
+
+  it('should return HTTP 400 for an invalid role value', async () => {
+    const res = await fetch(BASE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...validPayload, role: 'invalid-role' }),
+    });
+
+    expect(res.status).toBe(400);
+  });
+
+  it('should return HTTP 400 for an invalid sector value', async () => {
+    const res = await fetch(BASE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...validPayload, sector: 'invalid-sector' }),
+    });
+
+    expect(res.status).toBe(400);
+  });
+
+  it('should return HTTP 400 for an invalid CPF format', async () => {
+    const res = await fetch(BASE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...validPayload, cpf: '123' }),
+    });
+
+    expect(res.status).toBe(400);
+  });
+
+  it('should return HTTP 409 for a duplicate email', async () => {
+    const res = await fetch(BASE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...validPayload, email: seededUsers[0].email }),
+    });
+
+    expect(res.status).toBe(409);
+  });
+
+  it('should return HTTP 409 for a duplicate CPF', async () => {
+    const res = await fetch(BASE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...validPayload, cpf: seededUsers[0].cpf }),
+    });
+
+    expect(res.status).toBe(409);
+  });
+});
