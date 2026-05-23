@@ -14,46 +14,55 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { Request } from 'express';
-import { JwtGuard } from '../auth/jwt.guard';
 import {
   RoutePolicyGuard,
   type ResolvedPolicy,
 } from '../auth/route-policy.guard';
 import { RoleSerializerInterceptor } from '../auth/role-serializer.interceptor';
 import { RoutePolicy } from '../auth/decorators/route-policy.decorator';
-import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { createUserSchema, updateUserSchema } from './dto/create-user.dto';
+import type { JwtClaims } from '../auth/jwt.guard';
+import { updateUserSchema, createUserSchema } from './dto/create-user.dto';
 import { UsersService } from './users.service';
-import type { UserResponse } from './users.service';
 
-type PolicyRequest = Request & { policy?: ResolvedPolicy };
+type PolicyRequest = Request & {
+  policy?: ResolvedPolicy;
+  jwtClaims: JwtClaims;
+};
 
 @Controller('users')
-@UseGuards(JwtGuard, RoutePolicyGuard)
+@UseGuards(RoutePolicyGuard)
 @UseInterceptors(RoleSerializerInterceptor)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Post()
   @HttpCode(201)
-  @RoutePolicy({ access: { mode: 'authenticated' } })
+  @RoutePolicy({ access: { mode: 'unexistent' } })
   create(
     @Body() body: unknown,
-    @CurrentUser() caller: UserResponse,
-  ): Promise<UserResponse> {
+    @Req() req: PolicyRequest,
+  ): Promise<import('./users.service').UserResponse> {
+    const { sub, email } = req.jwtClaims;
+    if (
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        sub,
+      )
+    ) {
+      throw new BadRequestException('Token sub must be a valid UUID');
+    }
     const result = createUserSchema.safeParse(body);
     if (!result.success) {
       throw new BadRequestException(result.error.flatten());
     }
-    if (result.data.email !== caller.email) {
-      throw new ForbiddenException('You can only create your own user account');
-    }
-    return this.usersService.create(result.data);
+    return this.usersService.create(sub, email, result.data);
   }
 
   @Patch(':user_id')
   @RoutePolicy({
-    access: { mode: 'superuser-or-self' },
+    access: {
+      mode: 'authenticated',
+      rba: [['minRank', 3], 'self'],
+    },
     write: {
       superuser: ['email', 'name', 'role', 'sector', 'cpf'],
       self: ['name', 'cpf'],
@@ -64,7 +73,7 @@ export class UsersController {
     @Param('user_id') userId: string,
     @Body() body: unknown,
     @Req() req: PolicyRequest,
-  ): Promise<UserResponse> {
+  ): Promise<import('./users.service').UserResponse> {
     const writableFields = req.policy?.writableFields;
 
     if (
@@ -93,7 +102,7 @@ export class UsersController {
 
   @Delete(':user_id')
   @HttpCode(204)
-  @RoutePolicy({ access: { mode: 'superuser-only', noSelfAccess: true } })
+  @RoutePolicy({ access: { mode: 'authenticated', rba: [['minRank', 3]] } })
   deactivate(@Param('user_id') userId: string): Promise<void> {
     return this.usersService.deactivate(userId);
   }
@@ -103,7 +112,7 @@ export class UsersController {
     access: { mode: 'authenticated' },
     output: { cpf: { minRank: 2, selfBypass: false } },
   })
-  findAll(): Promise<UserResponse[]> {
+  findAll(): Promise<import('./users.service').UserResponse[]> {
     return this.usersService.findAll();
   }
 
@@ -112,7 +121,9 @@ export class UsersController {
     access: { mode: 'authenticated' },
     output: { cpf: { minRank: 2, selfBypass: true } },
   })
-  findOne(@Param('user_id') userId: string): Promise<UserResponse> {
+  findOne(
+    @Param('user_id') userId: string,
+  ): Promise<import('./users.service').UserResponse> {
     return this.usersService.findOne(userId);
   }
 }

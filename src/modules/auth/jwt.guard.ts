@@ -1,20 +1,32 @@
-import {
-  CanActivate,
-  ExecutionContext,
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { TokenExpiredError } from 'jsonwebtoken';
 import { Request } from 'express';
 import { AuthService } from './auth.service';
 import type { UserResponse } from '../users/users.service';
+
+export type JwtStatus =
+  | 'no-token'
+  | 'token-expired'
+  | 'token-invalid'
+  | 'user-not-found'
+  | 'ok';
+
+export interface JwtClaims {
+  sub: string;
+  email: string;
+}
 
 interface JwtPayload {
   email: string;
   sub: string;
 }
 
-type AuthenticatedRequest = Request & { user: UserResponse };
+export type EnrichedRequest = Request & {
+  jwtStatus: JwtStatus;
+  jwtClaims?: JwtClaims;
+  user?: UserResponse;
+};
 
 @Injectable()
 export class JwtGuard implements CanActivate {
@@ -24,13 +36,12 @@ export class JwtGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
-
+    const request = context.switchToHttp().getRequest<EnrichedRequest>();
     const authHeader = request.headers.authorization;
+
     if (!authHeader?.startsWith('Bearer ')) {
-      throw new UnauthorizedException(
-        'Authorization header missing or malformed',
-      );
+      request.jwtStatus = 'no-token';
+      return true;
     }
 
     const token = authHeader.slice(7);
@@ -38,11 +49,21 @@ export class JwtGuard implements CanActivate {
     let payload: JwtPayload;
     try {
       payload = this.jwtService.verify<JwtPayload>(token);
-    } catch {
-      throw new UnauthorizedException('Invalid or expired token');
+    } catch (err) {
+      request.jwtStatus =
+        err instanceof TokenExpiredError ? 'token-expired' : 'token-invalid';
+      return true;
     }
 
-    request.user = await this.authService.resolveUser(payload.email);
+    request.jwtClaims = { sub: payload.sub, email: payload.email };
+
+    try {
+      request.user = await this.authService.resolveUser(payload.email);
+      request.jwtStatus = 'ok';
+    } catch {
+      request.jwtStatus = 'user-not-found';
+    }
+
     return true;
   }
 }

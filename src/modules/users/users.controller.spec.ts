@@ -11,6 +11,10 @@ function signToken(email: string): string {
   return jwt.sign({ email, sub: 'test-sub' }, JWT_SECRET);
 }
 
+function signNewUserToken(email: string, sub: string): string {
+  return jwt.sign({ email, sub }, JWT_SECRET);
+}
+
 function authHeaders(email: string) {
   return { Authorization: `Bearer ${signToken(email)}` };
 }
@@ -276,7 +280,6 @@ describe('POST /users', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        email: 'sem.token@watt.com',
         name: 'Sem Token',
         sector: 'comercial',
         cpf: '11122233300',
@@ -285,68 +288,115 @@ describe('POST /users', () => {
     expect(res.status).toBe(401);
   });
 
-  it('should return HTTP 403 when email in body differs from caller email', async () => {
+  it('should return HTTP 409 when user is already registered (jwtStatus=ok)', async () => {
     const res = await fetch(BASE_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...authHeaders(seededUsers[0].email), // ana.silva
+        ...authHeaders(seededUsers[0].email),
       },
       body: JSON.stringify({
-        email: 'outro.email@watt.com',
-        name: 'Tentativa',
-        sector: 'comercial',
-        cpf: '33344455566',
+        name: 'Qualquer',
+        sector: 'projetos',
+        cpf: '99988877766',
       }),
     });
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(409);
+  });
+
+  it('should return HTTP 400 when token sub is not a valid UUID', async () => {
+    const token = signNewUserToken('non.uuid@watt.com', 'not-a-uuid');
+    const res = await fetch(BASE_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        name: 'Qualquer',
+        sector: 'projetos',
+        cpf: '44455566677',
+      }),
+    });
+    expect(res.status).toBe(400);
   });
 
   it('should return HTTP 400 when a required field is missing', async () => {
+    const token = signNewUserToken(
+      'missing.field@watt.com',
+      '00000000-0000-0000-0000-000000000090',
+    );
     const res = await fetch(BASE_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...authHeaders(seededUsers[0].email),
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ sector: 'projetos', cpf: '11122200099' }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('should return HTTP 400 for an invalid sector', async () => {
+    const token = signNewUserToken(
+      'invalid.sector@watt.com',
+      '00000000-0000-0000-0000-000000000091',
+    );
+    const res = await fetch(BASE_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
-        name: 'Sem Email',
-        sector: 'comercial',
+        name: 'Setor Inválido',
+        sector: 'invalido',
         cpf: '11122200099',
       }),
     });
     expect(res.status).toBe(400);
   });
 
-  it('should return HTTP 400 for an invalid email format', async () => {
+  it('should return HTTP 201 with id=sub, email from token, and role=consultor', async () => {
+    const newSub = '00000000-0000-0000-0000-000000000099';
+    const newEmail = 'novo.usuario@watt.com';
+    const token = signNewUserToken(newEmail, newSub);
     const res = await fetch(BASE_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...authHeaders(seededUsers[0].email),
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
-        email: 'not-an-email',
-        name: 'Invalid',
-        sector: 'comercial',
-        cpf: '11122200099',
+        name: 'Novo Usuário',
+        sector: 'projetos',
+        cpf: '00011122233',
       }),
     });
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as Record<string, unknown>;
+    expect(body.id).toBe(newSub);
+    expect(body.email).toBe(newEmail);
+    expect(body.role).toBe('consultor');
+    expect(body).toHaveProperty('created_at');
+    expect(body).toHaveProperty('updated_at');
   });
 
-  it('should return HTTP 409 for a duplicate email', async () => {
+  it('should return HTTP 409 for duplicate CPF', async () => {
+    const token = signNewUserToken(
+      'outro.novo@watt.com',
+      '00000000-0000-0000-0000-000000000097',
+    );
     const res = await fetch(BASE_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...authHeaders(seededUsers[0].email),
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
-        email: seededUsers[0].email,
-        name: 'Duplicate',
+        name: 'CPF Duplicado',
         sector: 'comercial',
-        cpf: '77766600011',
+        cpf: seededUsers[2].cpf,
       }),
     });
     expect(res.status).toBe(409);

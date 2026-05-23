@@ -2,17 +2,15 @@ import { SetMetadata } from '@nestjs/common';
 
 export const ROUTE_POLICY_KEY = 'route_policy';
 
-export type AccessMode =
-  | 'authenticated'
-  | 'min-rank'
-  | 'superuser-or-self'
-  | 'superuser-only';
+export type RbaCondition =
+  | 'self'
+  | ['minRank', number]
+  | ['sector', string | string[]];
 
-export interface AccessPolicy {
-  mode: AccessMode;
-  minRank?: number;
-  noSelfAccess?: boolean;
-}
+export type AccessPolicy =
+  | { mode: 'unauthenticated' }
+  | { mode: 'unexistent' }
+  | { mode: 'authenticated'; rba?: RbaCondition[] };
 
 export interface WritePolicy {
   superuser: string[];
