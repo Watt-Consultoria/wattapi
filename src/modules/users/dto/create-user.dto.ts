@@ -17,3 +17,20 @@ export const createUserSchema = z.object({
 });
 
 export type CreateUserDto = z.infer<typeof createUserSchema>;
+
+export const updateUserSchema = z.object({
+  email: z.email().optional(),
+  name: z.string().min(1).optional(),
+  role: z
+    .enum(['consultor', 'gerente', 'diretor', 'presidente', 'assessor'])
+    .optional(),
+  sector: z
+    .enum(['projetos', 'comercial', 'marketing', 'executivo', 'institucional'])
+    .optional(),
+  cpf: z
+    .string()
+    .regex(/^([0-9]{11}|[0-9]{3}\.[0-9]{3}\.[0-9]{3}-[0-9]{2})$/)
+    .optional(),
+});
+
+export type UpdateUserDto = z.infer<typeof updateUserSchema>;

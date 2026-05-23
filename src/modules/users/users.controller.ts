@@ -2,12 +2,14 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   Param,
+  Patch,
   Post,
 } from '@nestjs/common';
-import { createUserSchema } from './dto/create-user.dto';
+import { createUserSchema, updateUserSchema } from './dto/create-user.dto';
 import { UserResponse, UsersService } from './users.service';
 
 @Controller('users')
@@ -22,6 +24,27 @@ export class UsersController {
       throw new BadRequestException(result.error.flatten());
     }
     return this.usersService.create(result.data);
+  }
+
+  @Patch(':user_id')
+  update(
+    @Param('user_id') userId: string,
+    @Body() body: unknown,
+  ): Promise<UserResponse> {
+    const result = updateUserSchema.safeParse(body);
+    if (!result.success) {
+      throw new BadRequestException(result.error.flatten());
+    }
+    if (Object.keys(result.data).length === 0) {
+      throw new BadRequestException('At least one field must be provided');
+    }
+    return this.usersService.update(userId, result.data);
+  }
+
+  @Delete(':user_id')
+  @HttpCode(204)
+  deactivate(@Param('user_id') userId: string): Promise<void> {
+    return this.usersService.deactivate(userId);
   }
 
   @Get()

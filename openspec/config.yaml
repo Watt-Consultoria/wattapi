@@ -22,4 +22,5 @@ schema: spec-driven
 rules:
   tasks:
     - Always add an initial TDD task to any implementation and guarantee it fails before writing implementation code.
-    - For implementation tasks, always include a "Testing" section with
+    - For implementation tasks, always include a "Testing" section with test cases and expected results.
+    - Always include a finish task that verifies that no eslint errors are present in the modified files and that all tests pass.

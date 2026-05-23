@@ -291,3 +291,181 @@ describe('POST /users', () => {
     expect(res.status).toBe(409);
   });
 });
+
+describe('PATCH /users/:id', () => {
+  it('should return HTTP 200 and the updated user with the altered field', async () => {
+    const target = seededUsers[0];
+    const res = await fetch(`${BASE_URL}/${target.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Nome Atualizado' }),
+    });
+    const body = (await res.json()) as SeedUser;
+
+    expect(res.status).toBe(200);
+    expect(body.id).toBe(target.id);
+    expect(body.name).toBe('Nome Atualizado');
+    expect(body).toHaveProperty('email');
+    expect(body).toHaveProperty('role');
+    expect(body).toHaveProperty('sector');
+    expect(body).toHaveProperty('cpf');
+    expect(body).toHaveProperty('created_at');
+    expect(body).toHaveProperty('updated_at');
+  });
+
+  it('should only change the provided fields and preserve the rest', async () => {
+    const target = seededUsers[1];
+    const res = await fetch(`${BASE_URL}/${target.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Apenas Nome' }),
+    });
+    const body = (await res.json()) as SeedUser;
+
+    expect(res.status).toBe(200);
+    expect(body.name).toBe('Apenas Nome');
+    expect(body.email).toBe(target.email);
+    expect(body.role).toBe(target.role);
+    expect(body.sector).toBe(target.sector);
+    expect(body.cpf).toBe(target.cpf);
+  });
+
+  it('should return an updated_at >= the previous updated_at', async () => {
+    const target = seededUsers[2];
+    const before = new Date(target.updated_at).getTime();
+
+    const res = await fetch(`${BASE_URL}/${target.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Timestamp Test' }),
+    });
+    const body = (await res.json()) as SeedUser;
+
+    expect(res.status).toBe(200);
+    expect(new Date(body.updated_at).getTime()).toBeGreaterThanOrEqual(before);
+  });
+
+  it('should return HTTP 400 for an empty body {}', async () => {
+    const res = await fetch(`${BASE_URL}/${seededUsers[0].id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+
+    expect(res.status).toBe(400);
+  });
+
+  it('should return HTTP 400 for an invalid email', async () => {
+    const res = await fetch(`${BASE_URL}/${seededUsers[0].id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'not-an-email' }),
+    });
+
+    expect(res.status).toBe(400);
+  });
+
+  it('should return HTTP 400 for an invalid role', async () => {
+    const res = await fetch(`${BASE_URL}/${seededUsers[0].id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role: 'invalid-role' }),
+    });
+
+    expect(res.status).toBe(400);
+  });
+
+  it('should return HTTP 400 for an invalid sector', async () => {
+    const res = await fetch(`${BASE_URL}/${seededUsers[0].id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sector: 'invalid-sector' }),
+    });
+
+    expect(res.status).toBe(400);
+  });
+
+  it('should return HTTP 400 for an invalid CPF format', async () => {
+    const res = await fetch(`${BASE_URL}/${seededUsers[0].id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cpf: '123' }),
+    });
+
+    expect(res.status).toBe(400);
+  });
+
+  it('should return HTTP 404 for a non-existent user id', async () => {
+    const res = await fetch(
+      `${BASE_URL}/00000000-0000-0000-0000-000000000000`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'Ghost' }),
+      },
+    );
+
+    expect(res.status).toBe(404);
+  });
+
+  it('should return HTTP 409 when email already belongs to another user', async () => {
+    const res = await fetch(`${BASE_URL}/${seededUsers[0].id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: seededUsers[1].email }),
+    });
+
+    expect(res.status).toBe(409);
+  });
+
+  it('should return HTTP 409 when cpf already belongs to another user', async () => {
+    const res = await fetch(`${BASE_URL}/${seededUsers[0].id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cpf: seededUsers[1].cpf }),
+    });
+
+    expect(res.status).toBe(409);
+  });
+});
+
+describe('DELETE /users/:id', () => {
+  it('should return HTTP 204 with no body for an existing user', async () => {
+    const target = seededUsers[0];
+    const res = await fetch(`${BASE_URL}/${target.id}`, { method: 'DELETE' });
+
+    expect(res.status).toBe(204);
+    const text = await res.text();
+    expect(text).toBe('');
+  });
+
+  it('should return HTTP 404 on GET /users/:id after DELETE (user invisible via API)', async () => {
+    const target = seededUsers[0];
+    await fetch(`${BASE_URL}/${target.id}`, { method: 'DELETE' });
+
+    const res = await fetch(`${BASE_URL}/${target.id}`);
+    expect(res.status).toBe(404);
+  });
+
+  it('should no longer list the deleted user in GET /users', async () => {
+    const target = seededUsers[1];
+    await fetch(`${BASE_URL}/${target.id}`, { method: 'DELETE' });
+
+    const res = await fetch(BASE_URL);
+    const body = (await res.json()) as SeedUser[];
+    const ids = body.map((u) => u.id);
+
+    expect(ids).not.toContain(target.id);
+  });
+
+  it('should return HTTP 404 for a non-existent user id', async () => {
+    const res = await fetch(
+      `${BASE_URL}/00000000-0000-0000-0000-000000000000`,
+      {
+        method: 'DELETE',
+      },
+    );
+
+    expect(res.status).toBe(404);
+  });
+});
