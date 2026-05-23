@@ -1,3 +1,5 @@
+## MODIFIED Requirements
+
 ### Requirement: Desativar um usuário via DELETE /users/:id (soft delete)
 O sistema SHALL expor `DELETE /users/:id` que, em vez de excluir o registro, define `inactive = true` no usuário e retorna HTTP 204 sem body.
 

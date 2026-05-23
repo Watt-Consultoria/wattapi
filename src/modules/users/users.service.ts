@@ -15,7 +15,6 @@ export interface UserResponse {
   cpf: string;
   created_at: string;
   updated_at: string;
-  inactive: boolean;
 }
 
 interface UserRow {
@@ -63,11 +62,15 @@ export class UsersService {
     return result.rows.map(toResponse);
   }
 
-  async create(dto: CreateUserDto): Promise<UserResponse> {
+  async create(
+    id: string,
+    email: string,
+    dto: CreateUserDto,
+  ): Promise<UserResponse> {
     try {
       const result = await this.db.query<UserRow>(
-        `INSERT INTO users (email, name, role, sector, cpf) VALUES ($1, $2, $3, $4, $5) RETURNING ${SELECT_FIELDS}`,
-        [dto.email, dto.name, dto.role, dto.sector, dto.cpf],
+        `INSERT INTO users (id, email, name, role, sector, cpf) VALUES ($1, $2, $3, 'consultor', $4, $5) RETURNING ${SELECT_FIELDS}`,
+        [id, email, dto.name, dto.sector, dto.cpf],
       );
       return toResponse(result.rows[0]);
     } catch (err) {

@@ -44,6 +44,27 @@ const FAKE_USERS = [
     sector: 'executivo',
     cpf: '11122233344',
   },
+  {
+    email: 'joao.assessor@watt.com',
+    name: 'João Assessor',
+    role: 'assessor',
+    sector: 'institucional',
+    cpf: '55566677788',
+  },
+  {
+    email: 'lucia.presidente@watt.com',
+    name: 'Lucia Presidente',
+    role: 'presidente',
+    sector: 'executivo',
+    cpf: '99988877766',
+  },
+  {
+    email: 'inactive.auth@watt.com',
+    name: 'Inactive Auth User',
+    role: 'consultor',
+    sector: 'comercial',
+    cpf: '77766655544',
+  },
 ];
 
 export async function seedUsers(pool: Pool): Promise<SeedUser[]> {
