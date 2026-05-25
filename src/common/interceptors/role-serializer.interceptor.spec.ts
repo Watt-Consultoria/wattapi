@@ -2,8 +2,8 @@ import { ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { of } from 'rxjs';
 import { RoleSerializerInterceptor } from './role-serializer.interceptor';
-import type { RoutePolicyOptions } from './decorators/route-policy.decorator';
-import type { UserResponse } from '../users/users.service';
+import type { RoutePolicyOptions } from '../decorators/route-policy.decorator';
+import type { UserResponse } from '../../modules/users/users.service';
 
 function makeUser(role: string, id = 'caller-id'): UserResponse {
   return {

@@ -52,3 +52,4 @@ O sistema SHALL rejeitar cadastros com CPF já existente em `public.users`.
 ### Requirement: Role não é editável no cadastro
 
 O body de criação não aceita o campo `role`. O sistema SHALL sempre criar o usuário com `role = 'consultor'`.
+

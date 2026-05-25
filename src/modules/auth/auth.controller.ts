@@ -1,7 +1,7 @@
 import { Controller, Get, UseGuards } from '@nestjs/common';
-import { RoutePolicyGuard } from './route-policy.guard';
-import { RoutePolicy } from './decorators/route-policy.decorator';
-import { CurrentUser } from './decorators/current-user.decorator';
+import { RoutePolicyGuard } from '../../common/guards/route-policy.guard';
+import { RoutePolicy } from '../../common/decorators/route-policy.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { UserResponse } from '../users/users.service';
 
 @Controller('auth')

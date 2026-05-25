@@ -7,16 +7,16 @@ const JWT_SECRET =
   process.env.JWT_SECRET ??
   'your-super-secret-jwt-key-with-at-least-32-characters';
 
-function signToken(email: string): string {
-  return jwt.sign({ email, sub: 'test-sub' }, JWT_SECRET);
+function signToken(sub: string): string {
+  return jwt.sign({ sub }, JWT_SECRET);
 }
 
-function signNewUserToken(email: string, sub: string): string {
-  return jwt.sign({ email, sub }, JWT_SECRET);
+function signNewUserToken(sub: string): string {
+  return jwt.sign({ sub }, JWT_SECRET);
 }
 
-function authHeaders(email: string) {
-  return { Authorization: `Bearer ${signToken(email)}` };
+function authHeaders(userId: string) {
+  return { Authorization: `Bearer ${signToken(userId)}` };
 }
 
 let seededUsers: SeedUser[] = [];
@@ -45,21 +45,21 @@ describe('GET /users', () => {
 
   it('should return HTTP 200', async () => {
     const res = await fetch(BASE_URL, {
-      headers: authHeaders(seededUsers[0].email),
+      headers: authHeaders(seededUsers[0].id),
     });
     expect(res.status).toBe(200);
   });
 
   it('should return Content-Type application/json', async () => {
     const res = await fetch(BASE_URL, {
-      headers: authHeaders(seededUsers[0].email),
+      headers: authHeaders(seededUsers[0].id),
     });
     expect(res.headers.get('content-type')).toMatch(/application\/json/);
   });
 
   it('should return an array', async () => {
     const res = await fetch(BASE_URL, {
-      headers: authHeaders(seededUsers[0].email),
+      headers: authHeaders(seededUsers[0].id),
     });
     const body: unknown = await res.json();
     expect(Array.isArray(body)).toBe(true);
@@ -67,7 +67,7 @@ describe('GET /users', () => {
 
   it('should return at least the seeded users', async () => {
     const res = await fetch(BASE_URL, {
-      headers: authHeaders(seededUsers[0].email),
+      headers: authHeaders(seededUsers[0].id),
     });
     const body = (await res.json()) as SeedUser[];
     expect(body.length).toBeGreaterThanOrEqual(seededUsers.length);
@@ -75,7 +75,7 @@ describe('GET /users', () => {
 
   it('should return users with the correct shape', async () => {
     const res = await fetch(BASE_URL, {
-      headers: authHeaders(seededUsers[0].email),
+      headers: authHeaders(seededUsers[0].id),
     });
     const body = (await res.json()) as SeedUser[];
     const user = body[0];
@@ -91,7 +91,7 @@ describe('GET /users', () => {
 
   it('should return users with valid field types', async () => {
     const res = await fetch(BASE_URL, {
-      headers: authHeaders(seededUsers[0].email),
+      headers: authHeaders(seededUsers[0].id),
     });
     const body = (await res.json()) as SeedUser[];
     const user = body[0];
@@ -105,7 +105,7 @@ describe('GET /users', () => {
 
   it('should return users with valid ISO 8601 created_at and updated_at', async () => {
     const res = await fetch(BASE_URL, {
-      headers: authHeaders(seededUsers[0].email),
+      headers: authHeaders(seededUsers[0].id),
     });
     const body = (await res.json()) as SeedUser[];
     const user = body[0];
@@ -116,7 +116,7 @@ describe('GET /users', () => {
 
   it('should include all seeded users in the response', async () => {
     const res = await fetch(BASE_URL, {
-      headers: authHeaders(seededUsers[0].email),
+      headers: authHeaders(seededUsers[0].id),
     });
     const body = (await res.json()) as SeedUser[];
     const returnedIds = body.map((u) => u.id);
@@ -128,7 +128,7 @@ describe('GET /users', () => {
 
   it('should omit cpf for consultor caller', async () => {
     const res = await fetch(BASE_URL, {
-      headers: authHeaders(seededUsers[0].email), // consultor
+      headers: authHeaders(seededUsers[0].id), // consultor
     });
     const body = (await res.json()) as Record<string, unknown>[];
     expect(body[0]).not.toHaveProperty('cpf');
@@ -136,7 +136,7 @@ describe('GET /users', () => {
 
   it('should omit cpf for gerente caller', async () => {
     const res = await fetch(BASE_URL, {
-      headers: authHeaders(seededUsers[1].email), // gerente
+      headers: authHeaders(seededUsers[1].id), // gerente
     });
     const body = (await res.json()) as Record<string, unknown>[];
     expect(body[0]).not.toHaveProperty('cpf');
@@ -144,7 +144,7 @@ describe('GET /users', () => {
 
   it('should include cpf for diretor caller', async () => {
     const res = await fetch(BASE_URL, {
-      headers: authHeaders(seededUsers[2].email), // diretor
+      headers: authHeaders(seededUsers[2].id), // diretor
     });
     const body = (await res.json()) as SeedUser[];
     expect(body[0]).toHaveProperty('cpf');
@@ -152,7 +152,7 @@ describe('GET /users', () => {
 
   it('should include cpf for assessor caller', async () => {
     const res = await fetch(BASE_URL, {
-      headers: authHeaders(seededUsers[3].email), // assessor
+      headers: authHeaders(seededUsers[3].id), // assessor
     });
     const body = (await res.json()) as SeedUser[];
     expect(body[0]).toHaveProperty('cpf');
@@ -167,21 +167,21 @@ describe('GET /users/:user_id', () => {
 
   it('should return HTTP 200 for an existing user', async () => {
     const res = await fetch(`${BASE_URL}/${seededUsers[0].id}`, {
-      headers: authHeaders(seededUsers[0].email),
+      headers: authHeaders(seededUsers[0].id),
     });
     expect(res.status).toBe(200);
   });
 
   it('should return Content-Type application/json', async () => {
     const res = await fetch(`${BASE_URL}/${seededUsers[0].id}`, {
-      headers: authHeaders(seededUsers[0].email),
+      headers: authHeaders(seededUsers[0].id),
     });
     expect(res.headers.get('content-type')).toMatch(/application\/json/);
   });
 
   it('should return the correct user shape', async () => {
     const res = await fetch(`${BASE_URL}/${seededUsers[0].id}`, {
-      headers: authHeaders(seededUsers[0].email),
+      headers: authHeaders(seededUsers[0].id),
     });
     const user = (await res.json()) as SeedUser;
 
@@ -197,7 +197,7 @@ describe('GET /users/:user_id', () => {
   it('should return the user matching the requested id', async () => {
     const target = seededUsers[0];
     const res = await fetch(`${BASE_URL}/${target.id}`, {
-      headers: authHeaders(seededUsers[0].email),
+      headers: authHeaders(seededUsers[0].id),
     });
     const user = (await res.json()) as SeedUser;
     expect(user.id).toBe(target.id);
@@ -206,7 +206,7 @@ describe('GET /users/:user_id', () => {
   it('should return the correct user data', async () => {
     const target = seededUsers[0];
     const res = await fetch(`${BASE_URL}/${target.id}`, {
-      headers: authHeaders(seededUsers[0].email),
+      headers: authHeaders(seededUsers[0].id),
     });
     const user = (await res.json()) as SeedUser;
 
@@ -218,7 +218,7 @@ describe('GET /users/:user_id', () => {
 
   it('should return valid field types', async () => {
     const res = await fetch(`${BASE_URL}/${seededUsers[0].id}`, {
-      headers: authHeaders(seededUsers[0].email),
+      headers: authHeaders(seededUsers[0].id),
     });
     const user = (await res.json()) as SeedUser;
 
@@ -231,7 +231,7 @@ describe('GET /users/:user_id', () => {
 
   it('should return valid ISO 8601 created_at and updated_at', async () => {
     const res = await fetch(`${BASE_URL}/${seededUsers[0].id}`, {
-      headers: authHeaders(seededUsers[0].email),
+      headers: authHeaders(seededUsers[0].id),
     });
     const user = (await res.json()) as SeedUser;
 
@@ -243,7 +243,7 @@ describe('GET /users/:user_id', () => {
     const res = await fetch(
       `${BASE_URL}/00000000-0000-0000-0000-000000000000`,
       {
-        headers: authHeaders(seededUsers[0].email),
+        headers: authHeaders(seededUsers[0].id),
       },
     );
     expect(res.status).toBe(404);
@@ -251,7 +251,7 @@ describe('GET /users/:user_id', () => {
 
   it('should omit cpf for gerente viewing another user', async () => {
     const res = await fetch(`${BASE_URL}/${seededUsers[2].id}`, {
-      headers: authHeaders(seededUsers[1].email), // gerente viewing diretor
+      headers: authHeaders(seededUsers[1].id), // gerente viewing diretor
     });
     const user = (await res.json()) as Record<string, unknown>;
     expect(user).not.toHaveProperty('cpf');
@@ -259,7 +259,7 @@ describe('GET /users/:user_id', () => {
 
   it('should include cpf for gerente viewing own profile (selfBypass)', async () => {
     const res = await fetch(`${BASE_URL}/${seededUsers[1].id}`, {
-      headers: authHeaders(seededUsers[1].email), // gerente viewing self
+      headers: authHeaders(seededUsers[1].id), // gerente viewing self
     });
     const user = (await res.json()) as Record<string, unknown>;
     expect(user).toHaveProperty('cpf');
@@ -267,7 +267,7 @@ describe('GET /users/:user_id', () => {
 
   it('should include cpf for diretor viewing any profile', async () => {
     const res = await fetch(`${BASE_URL}/${seededUsers[0].id}`, {
-      headers: authHeaders(seededUsers[2].email), // diretor viewing consultor
+      headers: authHeaders(seededUsers[2].id), // diretor viewing consultor
     });
     const user = (await res.json()) as Record<string, unknown>;
     expect(user).toHaveProperty('cpf');
@@ -293,7 +293,7 @@ describe('POST /users', () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...authHeaders(seededUsers[0].email),
+        ...authHeaders(seededUsers[0].id),
       },
       body: JSON.stringify({
         name: 'Qualquer',
@@ -304,8 +304,8 @@ describe('POST /users', () => {
     expect(res.status).toBe(409);
   });
 
-  it('should return HTTP 400 when token sub is not a valid UUID', async () => {
-    const token = signNewUserToken('non.uuid@watt.com', 'not-a-uuid');
+  it('should return HTTP 401 when token sub is not a valid UUID', async () => {
+    const token = signNewUserToken('not-a-uuid');
     const res = await fetch(BASE_URL, {
       method: 'POST',
       headers: {
@@ -318,14 +318,11 @@ describe('POST /users', () => {
         cpf: '44455566677',
       }),
     });
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(401);
   });
 
   it('should return HTTP 400 when a required field is missing', async () => {
-    const token = signNewUserToken(
-      'missing.field@watt.com',
-      '00000000-0000-0000-0000-000000000090',
-    );
+    const token = signNewUserToken('00000000-0000-0000-0000-000000000090');
     const res = await fetch(BASE_URL, {
       method: 'POST',
       headers: {
@@ -338,10 +335,7 @@ describe('POST /users', () => {
   });
 
   it('should return HTTP 400 for an invalid sector', async () => {
-    const token = signNewUserToken(
-      'invalid.sector@watt.com',
-      '00000000-0000-0000-0000-000000000091',
-    );
+    const token = signNewUserToken('00000000-0000-0000-0000-000000000091');
     const res = await fetch(BASE_URL, {
       method: 'POST',
       headers: {
@@ -357,10 +351,10 @@ describe('POST /users', () => {
     expect(res.status).toBe(400);
   });
 
-  it('should return HTTP 201 with id=sub, email from token, and role=consultor', async () => {
+  it('should return HTTP 201 with id=sub, email from auth.users, and role=consultor', async () => {
     const newSub = '00000000-0000-0000-0000-000000000099';
     const newEmail = 'novo.usuario@watt.com';
-    const token = signNewUserToken(newEmail, newSub);
+    const token = signNewUserToken(newSub);
     const res = await fetch(BASE_URL, {
       method: 'POST',
       headers: {
@@ -383,10 +377,7 @@ describe('POST /users', () => {
   });
 
   it('should return HTTP 409 for duplicate CPF', async () => {
-    const token = signNewUserToken(
-      'outro.novo@watt.com',
-      '00000000-0000-0000-0000-000000000097',
-    );
+    const token = signNewUserToken('00000000-0000-0000-0000-000000000097');
     const res = await fetch(BASE_URL, {
       method: 'POST',
       headers: {
@@ -419,7 +410,7 @@ describe('PATCH /users/:id', () => {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
-        ...authHeaders(seededUsers[4].email), // presidente
+        ...authHeaders(seededUsers[4].id), // presidente
       },
       body: JSON.stringify({ name: 'Nome Atualizado' }),
     });
@@ -441,7 +432,7 @@ describe('PATCH /users/:id', () => {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
-        ...authHeaders(seededUsers[4].email), // presidente
+        ...authHeaders(seededUsers[4].id), // presidente
       },
       body: JSON.stringify({ name: 'Apenas Nome' }),
     });
@@ -462,7 +453,7 @@ describe('PATCH /users/:id', () => {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
-        ...authHeaders(seededUsers[4].email), // presidente
+        ...authHeaders(seededUsers[4].id), // presidente
       },
       body: JSON.stringify({ name: 'Timestamp Test' }),
     });
@@ -478,7 +469,7 @@ describe('PATCH /users/:id', () => {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
-        ...authHeaders(seededUsers[1].email),
+        ...authHeaders(seededUsers[1].id),
       },
       body: JSON.stringify({ name: 'Gerente Auto-edit' }),
     });
@@ -490,7 +481,7 @@ describe('PATCH /users/:id', () => {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
-        ...authHeaders(seededUsers[1].email), // gerente editing diretor
+        ...authHeaders(seededUsers[1].id), // gerente editing diretor
       },
       body: JSON.stringify({ name: 'Tentativa' }),
     });
@@ -503,7 +494,7 @@ describe('PATCH /users/:id', () => {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
-        ...authHeaders(seededUsers[1].email),
+        ...authHeaders(seededUsers[1].id),
       },
       body: JSON.stringify({ role: 'diretor' }),
     });
@@ -516,7 +507,7 @@ describe('PATCH /users/:id', () => {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
-        ...authHeaders(seededUsers[1].email),
+        ...authHeaders(seededUsers[1].id),
       },
       body: JSON.stringify({ sector: 'executivo' }),
     });
@@ -528,7 +519,7 @@ describe('PATCH /users/:id', () => {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
-        ...authHeaders(seededUsers[3].email), // assessor editing presidente
+        ...authHeaders(seededUsers[3].id), // assessor editing presidente
       },
       body: JSON.stringify({ name: 'Tentativa' }),
     });
@@ -540,7 +531,7 @@ describe('PATCH /users/:id', () => {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
-        ...authHeaders(seededUsers[4].email),
+        ...authHeaders(seededUsers[4].id),
       },
       body: JSON.stringify({}),
     });
@@ -552,7 +543,7 @@ describe('PATCH /users/:id', () => {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
-        ...authHeaders(seededUsers[4].email),
+        ...authHeaders(seededUsers[4].id),
       },
       body: JSON.stringify({ email: 'not-an-email' }),
     });
@@ -564,7 +555,7 @@ describe('PATCH /users/:id', () => {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
-        ...authHeaders(seededUsers[4].email),
+        ...authHeaders(seededUsers[4].id),
       },
       body: JSON.stringify({ role: 'invalid-role' }),
     });
@@ -576,7 +567,7 @@ describe('PATCH /users/:id', () => {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
-        ...authHeaders(seededUsers[4].email),
+        ...authHeaders(seededUsers[4].id),
       },
       body: JSON.stringify({ sector: 'invalid-sector' }),
     });
@@ -588,7 +579,7 @@ describe('PATCH /users/:id', () => {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
-        ...authHeaders(seededUsers[4].email),
+        ...authHeaders(seededUsers[4].id),
       },
       body: JSON.stringify({ cpf: '123' }),
     });
@@ -602,7 +593,7 @@ describe('PATCH /users/:id', () => {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          ...authHeaders(seededUsers[4].email),
+          ...authHeaders(seededUsers[4].id),
         },
         body: JSON.stringify({ name: 'Ghost' }),
       },
@@ -615,7 +606,7 @@ describe('PATCH /users/:id', () => {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
-        ...authHeaders(seededUsers[4].email),
+        ...authHeaders(seededUsers[4].id),
       },
       body: JSON.stringify({ email: seededUsers[1].email }),
     });
@@ -627,7 +618,7 @@ describe('PATCH /users/:id', () => {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
-        ...authHeaders(seededUsers[4].email),
+        ...authHeaders(seededUsers[4].id),
       },
       body: JSON.stringify({ cpf: seededUsers[1].cpf }),
     });
@@ -646,7 +637,7 @@ describe('DELETE /users/:id', () => {
   it('should return HTTP 403 for a regular user (consultor)', async () => {
     const res = await fetch(`${BASE_URL}/${seededUsers[1].id}`, {
       method: 'DELETE',
-      headers: authHeaders(seededUsers[0].email), // consultor
+      headers: authHeaders(seededUsers[0].id), // consultor
     });
     expect(res.status).toBe(403);
   });
@@ -654,7 +645,7 @@ describe('DELETE /users/:id', () => {
   it('should return HTTP 403 for self-delete', async () => {
     const res = await fetch(`${BASE_URL}/${seededUsers[4].id}`, {
       method: 'DELETE',
-      headers: authHeaders(seededUsers[4].email), // presidente trying to delete self
+      headers: authHeaders(seededUsers[4].id), // presidente trying to delete self
     });
     expect(res.status).toBe(403);
   });
@@ -662,7 +653,7 @@ describe('DELETE /users/:id', () => {
   it('should return HTTP 403 when assessor tries to delete presidente', async () => {
     const res = await fetch(`${BASE_URL}/${seededUsers[4].id}`, {
       method: 'DELETE',
-      headers: authHeaders(seededUsers[3].email), // assessor → presidente
+      headers: authHeaders(seededUsers[3].id), // assessor → presidente
     });
     expect(res.status).toBe(403);
   });
@@ -671,7 +662,7 @@ describe('DELETE /users/:id', () => {
     const target = seededUsers[0];
     const res = await fetch(`${BASE_URL}/${target.id}`, {
       method: 'DELETE',
-      headers: authHeaders(seededUsers[4].email), // presidente
+      headers: authHeaders(seededUsers[4].id), // presidente
     });
     expect(res.status).toBe(204);
     const text = await res.text();
@@ -681,7 +672,7 @@ describe('DELETE /users/:id', () => {
   it('should return HTTP 404 on GET /users/:id after DELETE (user invisible via API)', async () => {
     const target = seededUsers[0];
     const res = await fetch(`${BASE_URL}/${target.id}`, {
-      headers: authHeaders(seededUsers[2].email),
+      headers: authHeaders(seededUsers[2].id),
     });
     expect(res.status).toBe(404);
   });
@@ -690,11 +681,11 @@ describe('DELETE /users/:id', () => {
     const target = seededUsers[1];
     await fetch(`${BASE_URL}/${target.id}`, {
       method: 'DELETE',
-      headers: authHeaders(seededUsers[4].email),
+      headers: authHeaders(seededUsers[4].id),
     });
 
     const res = await fetch(BASE_URL, {
-      headers: authHeaders(seededUsers[2].email),
+      headers: authHeaders(seededUsers[2].id),
     });
     const body = (await res.json()) as SeedUser[];
     const ids = body.map((u) => u.id);
@@ -707,7 +698,7 @@ describe('DELETE /users/:id', () => {
       `${BASE_URL}/00000000-0000-0000-0000-000000000000`,
       {
         method: 'DELETE',
-        headers: authHeaders(seededUsers[4].email),
+        headers: authHeaders(seededUsers[4].id),
       },
     );
     expect(res.status).toBe(404);

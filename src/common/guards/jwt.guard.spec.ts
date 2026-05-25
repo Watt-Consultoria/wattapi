@@ -2,8 +2,8 @@ import { ExecutionContext } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { TokenExpiredError } from 'jsonwebtoken';
 import { JwtGuard } from './jwt.guard';
-import { AuthService } from './auth.service';
-import type { UserResponse } from '../users/users.service';
+import { AuthService } from '../../modules/auth/auth.service';
+import type { UserResponse } from '../../modules/users/users.service';
 
 function makeUser(): UserResponse {
   return {
@@ -39,6 +39,55 @@ describe('JwtGuard', () => {
     authService = { resolveUser: jest.fn() };
   });
 
+  it('sets jwtStatus=token-invalid when sub is not a valid UUID', async () => {
+    (jwtService.verify as jest.Mock).mockReturnValue({
+      sub: 'not-a-uuid',
+    });
+    const { request, context } = makeContext('Bearer valid.token');
+    const guard = new JwtGuard(
+      jwtService as unknown as JwtService,
+      authService as unknown as AuthService,
+    );
+    const result = await guard.canActivate(context);
+    expect(result).toBe(true);
+    expect(request.jwtStatus).toBe('token-invalid');
+    expect(request.jwtData).toBeUndefined();
+    expect(request.user).toBeUndefined();
+    expect(authService.resolveUser).not.toHaveBeenCalled();
+  });
+
+  it('calls resolveUser with sub (id), not email', async () => {
+    const user = makeUser();
+    const validSub = 'a1b2c3d4-0001-0001-0001-000000000001';
+    (jwtService.verify as jest.Mock).mockReturnValue({ sub: validSub });
+    authService.resolveUser.mockResolvedValue(user);
+    const { context } = makeContext('Bearer valid.token');
+    const guard = new JwtGuard(
+      jwtService as unknown as JwtService,
+      authService as unknown as AuthService,
+    );
+    await guard.canActivate(context);
+    expect(authService.resolveUser).toHaveBeenCalledWith(validSub);
+    expect(authService.resolveUser).not.toHaveBeenCalledWith(
+      expect.stringContaining('@'),
+    );
+  });
+
+  it('populates jwtData with only { sub } — no email', async () => {
+    const user = makeUser();
+    const validSub = 'a1b2c3d4-0001-0001-0001-000000000001';
+    (jwtService.verify as jest.Mock).mockReturnValue({ sub: validSub });
+    authService.resolveUser.mockResolvedValue(user);
+    const { request, context } = makeContext('Bearer valid.token');
+    const guard = new JwtGuard(
+      jwtService as unknown as JwtService,
+      authService as unknown as AuthService,
+    );
+    await guard.canActivate(context);
+    expect(request.jwtData).toEqual({ sub: validSub });
+    expect(request.jwtData).not.toHaveProperty('email');
+  });
+
   it('sets jwtStatus=no-token and returns true when no Authorization header', async () => {
     const { request, context } = makeContext(undefined);
     const guard = new JwtGuard(
@@ -48,7 +97,7 @@ describe('JwtGuard', () => {
     const result = await guard.canActivate(context);
     expect(result).toBe(true);
     expect(request.jwtStatus).toBe('no-token');
-    expect(request.jwtClaims).toBeUndefined();
+    expect(request.jwtData).toBeUndefined();
     expect(request.user).toBeUndefined();
   });
 
@@ -75,7 +124,7 @@ describe('JwtGuard', () => {
     const result = await guard.canActivate(context);
     expect(result).toBe(true);
     expect(request.jwtStatus).toBe('token-expired');
-    expect(request.jwtClaims).toBeUndefined();
+    expect(request.jwtData).toBeUndefined();
     expect(request.user).toBeUndefined();
   });
 
@@ -91,15 +140,13 @@ describe('JwtGuard', () => {
     const result = await guard.canActivate(context);
     expect(result).toBe(true);
     expect(request.jwtStatus).toBe('token-invalid');
-    expect(request.jwtClaims).toBeUndefined();
+    expect(request.jwtData).toBeUndefined();
     expect(request.user).toBeUndefined();
   });
 
-  it('sets jwtStatus=user-not-found and jwtClaims when token valid but user missing', async () => {
-    (jwtService.verify as jest.Mock).mockReturnValue({
-      sub: 'sub-abc',
-      email: 'unknown@test.com',
-    });
+  it('sets jwtStatus=user-not-found and jwtData when token valid but user missing', async () => {
+    const validSub = 'a1b2c3d4-0001-0001-0001-000000000001';
+    (jwtService.verify as jest.Mock).mockReturnValue({ sub: validSub });
     authService.resolveUser.mockRejectedValue(new Error('not found'));
     const { request, context } = makeContext('Bearer valid.token');
     const guard = new JwtGuard(
@@ -109,19 +156,14 @@ describe('JwtGuard', () => {
     const result = await guard.canActivate(context);
     expect(result).toBe(true);
     expect(request.jwtStatus).toBe('user-not-found');
-    expect(request.jwtClaims).toEqual({
-      sub: 'sub-abc',
-      email: 'unknown@test.com',
-    });
+    expect(request.jwtData).toEqual({ sub: validSub });
     expect(request.user).toBeUndefined();
   });
 
-  it('sets jwtStatus=ok, jwtClaims, and user when token valid and user found', async () => {
+  it('sets jwtStatus=ok, jwtData, and user when token valid and user found', async () => {
     const user = makeUser();
-    (jwtService.verify as jest.Mock).mockReturnValue({
-      sub: 'user-id',
-      email: 'user@test.com',
-    });
+    const validSub = 'a1b2c3d4-0001-0001-0001-000000000001';
+    (jwtService.verify as jest.Mock).mockReturnValue({ sub: validSub });
     authService.resolveUser.mockResolvedValue(user);
     const { request, context } = makeContext('Bearer valid.token');
     const guard = new JwtGuard(
@@ -131,10 +173,7 @@ describe('JwtGuard', () => {
     const result = await guard.canActivate(context);
     expect(result).toBe(true);
     expect(request.jwtStatus).toBe('ok');
-    expect(request.jwtClaims).toEqual({
-      sub: 'user-id',
-      email: 'user@test.com',
-    });
+    expect(request.jwtData).toEqual({ sub: validSub });
     expect(request.user).toBe(user);
   });
 });

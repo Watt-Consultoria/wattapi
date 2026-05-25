@@ -8,7 +8,7 @@ Além disso, a arquitetura atual mistura responsabilidades: o `JwtGuard` conhece
 
 ### JwtGuard → middleware global de enriquecimento
 
-O `JwtGuard` passa a ser aplicado globalmente e nunca rejeita requisições. Em vez disso, popula `request.jwtStatus` com uma flag indicando o estado da autenticação, e popula `request.jwtClaims` e `request.user` quando possível.
+O `JwtGuard` passa a ser aplicado globalmente e nunca rejeita requisições. Em vez disso, popula `request.jwtStatus` com uma flag indicando o estado da autenticação, e popula `request.jwtData` e `request.user` quando possível.
 
 ### RoutePolicyGuard → árbitro centralizado de acesso
 
@@ -18,7 +18,7 @@ O campo `access` passa a ser um discriminated union com dois níveis: `mode` (`'
 
 ### POST /users
 
-- Usa `id = jwtClaims.sub` e `email = jwtClaims.email` — nenhum dos dois vem do body
+- Usa `id = jwtData.sub` e `email = jwtData.email` — nenhum dos dois vem do body
 - `role` removido do body, sempre `'consultor'` na criação
 - Recebe `mode: ['unexistent']`, que rejeita com 409 se o usuário já existir (guard) ou com 401 contextual se o token for inválido/ausente
 
@@ -36,7 +36,7 @@ O campo `access` passa a ser um discriminated union com dois níveis: `mode` (`'
 - `src/modules/auth/decorators/route-policy.decorator.ts` — reescrever `AccessMode` como union de strings e tuplas; `mode` vira `AccessMode[]`; remover `minRank` e `noSelfAccess` de `AccessPolicy`
 - `src/modules/auth/route-policy.guard.ts` — reescrever avaliação de modos; adicionar leitura de `jwtStatus`; lógica OR entre modos; mensagens de erro contextuais
 - `src/modules/users/dto/create-user.dto.ts` — remover `email` e `role` de `createUserSchema`
-- `src/modules/users/users.controller.ts` — `POST /users` usa `mode: ['unexistent']`, lê `jwtClaims` da request; atualizar todos os `@RoutePolicy` para novo formato de array
+- `src/modules/users/users.controller.ts` — `POST /users` usa `mode: ['unexistent']`, lê `jwtData` da request; atualizar todos os `@RoutePolicy` para novo formato de array
 - `src/modules/users/users.service.ts` — `create()` recebe `id` e `email` explicitamente, hardcoda `role = 'consultor'`
 - `src/app.module.ts` — registrar `JwtGuard` como guard global via `APP_GUARD`
 - Sem mudanças de schema de banco de dados

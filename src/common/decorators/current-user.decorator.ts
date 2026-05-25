@@ -1,6 +1,6 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
 import { Request } from 'express';
-import type { UserResponse } from '../../users/users.service';
+import type { UserResponse } from '../../modules/users/users.service';
 
 export const CurrentUser = createParamDecorator(
   (_data: unknown, ctx: ExecutionContext): UserResponse => {

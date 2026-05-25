@@ -8,13 +8,13 @@ import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
-import type { UserResponse } from '../users/users.service';
-import { getRank } from './role-hierarchy';
+import type { UserResponse } from '../../modules/users/users.service';
+import { getRank } from '../guards/role-hierarchy';
 import {
   ROUTE_POLICY_KEY,
   type OutputPolicy,
   type RoutePolicyOptions,
-} from './decorators/route-policy.decorator';
+} from '../decorators/route-policy.decorator';
 
 type AuthRequest = Request & { user: UserResponse };
 

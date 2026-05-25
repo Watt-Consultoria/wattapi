@@ -32,7 +32,7 @@ describe('GET /auth/me', () => {
   });
 
   it('should return HTTP 401 when Authorization header has no Bearer prefix', async () => {
-    const token = signToken({ email: seededUsers[0].email, sub: 'test-sub' });
+    const token = signToken({ sub: seededUsers[0].id });
     const res = await fetch(BASE_URL, {
       headers: { Authorization: token },
     });
@@ -41,7 +41,7 @@ describe('GET /auth/me', () => {
 
   it('should return HTTP 401 when token has invalid signature', async () => {
     const token = jwt.sign(
-      { email: seededUsers[0].email, sub: 'test-sub' },
+      { sub: seededUsers[0].id },
       'wrong-secret-key-that-is-long-enough-to-pass',
     );
     const res = await fetch(BASE_URL, {
@@ -52,8 +52,7 @@ describe('GET /auth/me', () => {
 
   it('should return HTTP 401 when token is expired', async () => {
     const token = signToken({
-      email: seededUsers[0].email,
-      sub: 'test-sub',
+      sub: seededUsers[0].id,
       exp: Math.floor(Date.now() / 1000) - 60,
     });
     const res = await fetch(BASE_URL, {
@@ -62,11 +61,8 @@ describe('GET /auth/me', () => {
     expect(res.status).toBe(401);
   });
 
-  it('should return HTTP 401 when email in token has no matching user in public.users', async () => {
-    const token = signToken({
-      email: 'nonexistent@watt.com',
-      sub: 'test-sub',
-    });
+  it('should return HTTP 401 when token sub has no matching user in public.users', async () => {
+    const token = signToken({ sub: '00000000-0000-0000-0000-000000000001' });
     const res = await fetch(BASE_URL, {
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -74,21 +70,14 @@ describe('GET /auth/me', () => {
   });
 
   it('should return HTTP 401 when user is inactive', async () => {
-    // seededUsers[5] is inactive.auth@watt.com (seeded as active, deleted here)
     const inactiveUser = seededUsers[5];
-    const presidenteToken = signToken({
-      email: seededUsers[4].email, // lucia.presidente
-      sub: 'test-sub',
-    });
+    const presidenteToken = signToken({ sub: seededUsers[4].id });
     await fetch(`http://localhost:3000/users/${inactiveUser.id}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${presidenteToken}` },
     });
 
-    const token = signToken({
-      email: inactiveUser.email,
-      sub: 'test-sub',
-    });
+    const token = signToken({ sub: inactiveUser.id });
     const res = await fetch(BASE_URL, {
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -97,7 +86,7 @@ describe('GET /auth/me', () => {
 
   it('should return HTTP 200 with full UserResponse for a valid token and active user', async () => {
     const target = seededUsers[0];
-    const token = signToken({ email: target.email, sub: 'test-sub' });
+    const token = signToken({ sub: target.id });
     const res = await fetch(BASE_URL, {
       headers: { Authorization: `Bearer ${token}` },
     });
