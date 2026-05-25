@@ -1,10 +1,12 @@
 import {
+  BadRequestException,
   Controller,
   ForbiddenException,
   Get,
   HttpCode,
   Param,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -19,6 +21,7 @@ import type {
   ClockInResponse,
   ClockOutResponse,
   SummaryResponse,
+  TimeEntriesListResponse,
 } from './dto/time-tracking.dto';
 
 type PolicyRequest = Request & {
@@ -30,6 +33,28 @@ type PolicyRequest = Request & {
 @UseGuards(RoutePolicyGuard)
 export class TimeTrackingController {
   constructor(private readonly timeTrackingService: TimeTrackingService) {}
+
+  @Get('/summary')
+  @RoutePolicy({ access: { mode: 'authenticated' } })
+  listWeeklySummary(
+    @Req() req: PolicyRequest,
+    @Query('week') week = '0',
+  ): Promise<TimeEntriesListResponse> {
+    if (!isSuperuser(req.user.role)) {
+      throw new ForbiddenException(
+        'Acesso negado: apenas superusuários podem acessar a listagem geral',
+      );
+    }
+
+    const weekOffset = parseInt(week, 10);
+    if (!Number.isInteger(weekOffset) || isNaN(weekOffset) || weekOffset < 0) {
+      throw new BadRequestException(
+        'O parâmetro week deve ser um inteiro >= 0',
+      );
+    }
+
+    return this.timeTrackingService.getWeeklySummaryList(weekOffset);
+  }
 
   @Post('clock-in')
   @HttpCode(201)

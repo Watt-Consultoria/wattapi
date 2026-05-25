@@ -297,4 +297,103 @@ describe('GET /time-entries/summary/:userId', () => {
     });
     expect(res.status).toBe(200);
   });
+
+  it('should include min_hours_met in summary response', async () => {
+    const superuser = seededUsers[3];
+    const target = seededUsers[0];
+
+    const res = await fetch(`${BASE_URL}/summary/${target.id}`, {
+      headers: authHeaders(superuser.id),
+    });
+    const body = (await res.json()) as { min_hours_met: unknown };
+    expect(typeof body.min_hours_met).toBe('boolean');
+  });
+});
+
+// ─── GET /time-entries ───────────────────────────────────────────────────────
+
+describe('GET /time-entries', () => {
+  it('should return HTTP 401 when no token is provided', async () => {
+    const res = await fetch(BASE_URL);
+    expect(res.status).toBe(401);
+  });
+
+  it('should return HTTP 403 when non-superuser requests the list', async () => {
+    const consultor = seededUsers[0];
+    const res = await fetch(BASE_URL, { headers: authHeaders(consultor.id) });
+    expect(res.status).toBe(403);
+  });
+
+  it('should return HTTP 400 for non-numeric week param', async () => {
+    const superuser = seededUsers[3];
+    const res = await fetch(`${BASE_URL}?week=abc`, {
+      headers: authHeaders(superuser.id),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('should return HTTP 400 for negative week param', async () => {
+    const superuser = seededUsers[3];
+    const res = await fetch(`${BASE_URL}?week=-1`, {
+      headers: authHeaders(superuser.id),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('should return HTTP 200 with members list for superuser', async () => {
+    const superuser = seededUsers[3];
+    const res = await fetch(BASE_URL, { headers: authHeaders(superuser.id) });
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      week_start: unknown;
+      week_end: unknown;
+      min_week_hours: unknown;
+      members: unknown[];
+    };
+    expect(typeof body.week_start).toBe('string');
+    expect(typeof body.week_end).toBe('string');
+    expect(typeof body.min_week_hours).toBe('number');
+    expect(Array.isArray(body.members)).toBe(true);
+  });
+
+  it('should return HTTP 200 for previous week (week=1)', async () => {
+    const superuser = seededUsers[3];
+    const res = await fetch(`${BASE_URL}?week=1`, {
+      headers: authHeaders(superuser.id),
+    });
+    expect(res.status).toBe(200);
+  });
+
+  it('should include min_hours_met per member', async () => {
+    const superuser = seededUsers[3];
+    const res = await fetch(BASE_URL, { headers: authHeaders(superuser.id) });
+    const body = (await res.json()) as {
+      members: { min_hours_met: unknown }[];
+    };
+    expect(body.members.length).toBeGreaterThan(0);
+    body.members.forEach((m) => {
+      expect(typeof m.min_hours_met).toBe('boolean');
+    });
+  });
+
+  it('should not include soft-deleted users in the list', async () => {
+    const superuser = seededUsers[3];
+    const target = seededUsers[1];
+
+    await pool.query(
+      'UPDATE users SET inactive = true, updated_at = now() WHERE id = $1',
+      [target.id],
+    );
+
+    const res = await fetch(BASE_URL, { headers: authHeaders(superuser.id) });
+    const body = (await res.json()) as { members: { user_id: string }[] };
+    const found = body.members.some((m) => m.user_id === target.id);
+    expect(found).toBe(false);
+
+    await pool.query(
+      'UPDATE users SET inactive = false, updated_at = now() WHERE id = $1',
+      [target.id],
+    );
+  });
 });

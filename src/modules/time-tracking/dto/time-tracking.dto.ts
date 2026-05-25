@@ -53,6 +53,21 @@ export interface SummaryResponse {
   week_start: string;
   week_end: string;
   total_minutes: number;
+  min_hours_met: boolean;
   valid_sessions: ValidSession[];
   current_session: CurrentSession;
+}
+
+export interface MemberWeeklySummary {
+  user_id: string;
+  name: string;
+  total_minutes: number;
+  min_hours_met: boolean;
+}
+
+export interface TimeEntriesListResponse {
+  week_start: string;
+  week_end: string;
+  min_week_hours: number;
+  members: MemberWeeklySummary[];
 }

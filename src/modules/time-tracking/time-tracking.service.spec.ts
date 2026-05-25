@@ -2,6 +2,7 @@ import { ConflictException, ForbiddenException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { TimeTrackingService } from './time-tracking.service';
 import { DatabaseService } from '../../database/database.service';
+import { SettingsService } from '../settings/settings.service';
 
 const makeEntry = (overrides: Record<string, unknown> = {}) => ({
   id: 'entry-uuid-1',
@@ -16,6 +17,7 @@ const makeEntry = (overrides: Record<string, unknown> = {}) => ({
 describe('TimeTrackingService', () => {
   let service: TimeTrackingService;
   let db: jest.Mocked<Pick<DatabaseService, 'query'>>;
+  let settings: jest.Mocked<Pick<SettingsService, 'get'>>;
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
@@ -25,11 +27,16 @@ describe('TimeTrackingService', () => {
           provide: DatabaseService,
           useValue: { query: jest.fn() },
         },
+        {
+          provide: SettingsService,
+          useValue: { get: jest.fn().mockReturnValue(40) },
+        },
       ],
     }).compile();
 
     service = module.get(TimeTrackingService);
     db = module.get(DatabaseService);
+    settings = module.get(SettingsService);
   });
 
   describe('clockIn', () => {
@@ -210,6 +217,87 @@ describe('TimeTrackingService', () => {
       );
 
       expect(result).toHaveProperty('current_session');
+    });
+
+    it('should return min_hours_met true when total_minutes >= min_week_hours * 60', async () => {
+      const now = new Date();
+      const sessions = [
+        {
+          id: 'a',
+          clocked_in_at: new Date(now.getTime() - 40 * 3600000),
+          clocked_out_at: now,
+          duration_seconds: 40 * 3600,
+        },
+      ];
+      (db.query as jest.Mock)
+        .mockResolvedValueOnce({ rows: sessions, rowCount: 1 })
+        .mockResolvedValueOnce({ rows: [], rowCount: 0 });
+      (settings.get as jest.Mock).mockReturnValue(40);
+
+      const result = await service.getSummary('user-1', 'consultor', 'user-1');
+
+      expect(result.min_hours_met).toBe(true);
+    });
+
+    it('should return min_hours_met false when total_minutes < min_week_hours * 60', async () => {
+      (db.query as jest.Mock)
+        .mockResolvedValueOnce({ rows: [], rowCount: 0 })
+        .mockResolvedValueOnce({ rows: [], rowCount: 0 });
+      (settings.get as jest.Mock).mockReturnValue(40);
+
+      const result = await service.getSummary('user-1', 'consultor', 'user-1');
+
+      expect(result.min_hours_met).toBe(false);
+    });
+  });
+
+  describe('getWeeklySummaryList', () => {
+    it('should return all active members with their aggregated minutes', async () => {
+      const memberRows = [
+        { user_id: 'user-1', name: 'Alice', total_seconds: 40 * 3600 },
+        { user_id: 'user-2', name: 'Bob', total_seconds: 0 },
+      ];
+      (db.query as jest.Mock).mockResolvedValueOnce({
+        rows: memberRows,
+        rowCount: 2,
+      });
+      (settings.get as jest.Mock).mockReturnValue(40);
+
+      const result = await service.getWeeklySummaryList(0);
+
+      expect(result.members).toHaveLength(2);
+      expect(result.members[0].user_id).toBe('user-1');
+      expect(result.members[0].total_minutes).toBe(2400);
+      expect(result.members[0].min_hours_met).toBe(true);
+      expect(result.members[1].total_minutes).toBe(0);
+      expect(result.members[1].min_hours_met).toBe(false);
+      expect(result.min_week_hours).toBe(40);
+      expect(typeof result.week_start).toBe('string');
+      expect(typeof result.week_end).toBe('string');
+    });
+
+    it('should include users with zero minutes (no sessions in week)', async () => {
+      (db.query as jest.Mock).mockResolvedValueOnce({
+        rows: [{ user_id: 'user-1', name: 'Alice', total_seconds: 0 }],
+        rowCount: 1,
+      });
+      (settings.get as jest.Mock).mockReturnValue(40);
+
+      const result = await service.getWeeklySummaryList(0);
+
+      expect(result.members[0].total_minutes).toBe(0);
+      expect(result.members[0].min_hours_met).toBe(false);
+    });
+
+    it('should pass correct week offset to query', async () => {
+      (db.query as jest.Mock).mockResolvedValueOnce({ rows: [], rowCount: 0 });
+
+      await service.getWeeklySummaryList(2);
+
+      // eslint-disable-next-line
+      const call = (db.query as jest.Mock).mock.calls[0];
+      // eslint-disable-next-line
+      expect(call[1]).toEqual([2]);
     });
   });
 });
