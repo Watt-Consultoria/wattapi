@@ -17,11 +17,11 @@ interface UserRow {
 export class AuthService {
   constructor(private readonly db: DatabaseService) {}
 
-  async resolveUser(email: string): Promise<UserResponse> {
+  async resolveUser(id: string): Promise<UserResponse> {
     const result = await this.db.query<UserRow>(
       `SELECT id, email, name, role, sector, cpf, created_at, updated_at
-       FROM users WHERE email = $1 AND inactive = false`,
-      [email],
+       FROM users WHERE id = $1 AND inactive = false`,
+      [id],
     );
 
     if (result.rows.length === 0) {
@@ -34,5 +34,20 @@ export class AuthService {
       created_at: row.created_at.toISOString(),
       updated_at: row.updated_at.toISOString(),
     };
+  }
+
+  async getAuthEmail(id: string): Promise<string> {
+    const result = await this.db.query<{ email: string }>(
+      `SELECT email FROM auth.users WHERE id = $1`,
+      [id],
+    );
+
+    if (result.rows.length === 0) {
+      throw new UnauthorizedException(
+        'User not found in authentication system',
+      );
+    }
+
+    return result.rows[0].email;
   }
 }

@@ -6,8 +6,8 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { RoutePolicyGuard } from './route-policy.guard';
-import type { RoutePolicyOptions } from './decorators/route-policy.decorator';
-import type { UserResponse } from '../users/users.service';
+import type { RoutePolicyOptions } from '../decorators/route-policy.decorator';
+import type { UserResponse } from '../../modules/users/users.service';
 import type { DatabaseService } from '../../database/database.service';
 
 type JwtStatus =
@@ -37,7 +37,7 @@ function makeUser(
 function makeContext(options: {
   jwtStatus?: JwtStatus;
   user?: UserResponse;
-  jwtClaims?: { sub: string; email: string };
+  jwtData?: { sub: string; email: string };
   params?: Record<string, string>;
   policy?: RoutePolicyOptions;
   dbRows?: { role: string }[];
@@ -45,7 +45,7 @@ function makeContext(options: {
   const {
     jwtStatus = 'ok',
     user,
-    jwtClaims,
+    jwtData,
     params = {},
     policy,
     dbRows = [],
@@ -63,7 +63,7 @@ function makeContext(options: {
   const request: Record<string, unknown> = {
     jwtStatus,
     user,
-    jwtClaims,
+    jwtData,
     params,
     policy: undefined,
   };
@@ -111,7 +111,7 @@ describe('RoutePolicyGuard', () => {
     it('allows when jwtStatus=user-not-found', async () => {
       const { reflector, db, context } = makeContext({
         jwtStatus: 'user-not-found',
-        jwtClaims: { sub: 'new-sub', email: 'new@test.com' },
+        jwtData: { sub: 'new-sub', email: 'new@test.com' },
         policy: { access: { mode: 'unexistent' } },
       });
       const guard = new RoutePolicyGuard(reflector, db);

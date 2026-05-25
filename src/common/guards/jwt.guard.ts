@@ -2,8 +2,8 @@ import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { TokenExpiredError } from 'jsonwebtoken';
 import { Request } from 'express';
-import { AuthService } from './auth.service';
-import type { UserResponse } from '../users/users.service';
+import { AuthService } from '../../modules/auth/auth.service';
+import type { UserResponse } from '../../modules/users/users.service';
 
 export type JwtStatus =
   | 'no-token'
@@ -12,21 +12,22 @@ export type JwtStatus =
   | 'user-not-found'
   | 'ok';
 
-export interface JwtClaims {
+export interface JwtData {
   sub: string;
-  email: string;
 }
 
 interface JwtPayload {
-  email: string;
   sub: string;
 }
 
 export type EnrichedRequest = Request & {
   jwtStatus: JwtStatus;
-  jwtClaims?: JwtClaims;
+  jwtData?: JwtData;
   user?: UserResponse;
 };
+
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 @Injectable()
 export class JwtGuard implements CanActivate {
@@ -55,10 +56,15 @@ export class JwtGuard implements CanActivate {
       return true;
     }
 
-    request.jwtClaims = { sub: payload.sub, email: payload.email };
+    if (!UUID_REGEX.test(payload.sub)) {
+      request.jwtStatus = 'token-invalid';
+      return true;
+    }
+
+    request.jwtData = { sub: payload.sub };
 
     try {
-      request.user = await this.authService.resolveUser(payload.email);
+      request.user = await this.authService.resolveUser(payload.sub);
       request.jwtStatus = 'ok';
     } catch {
       request.jwtStatus = 'user-not-found';

@@ -7,6 +7,7 @@ O JWT do Supabase contém `sub` (UUID do usuário em `auth.users`) e `email`. O 
 ## Goals / Non-Goals
 
 **Goals:**
+
 - Separar autenticação (JwtGuard) de autorização (RoutePolicyGuard) de forma limpa
 - Permitir que `POST /users` seja chamado por usuários com token válido mas ainda não registrados
 - Tornar os modos de acesso composíveis via array com lógica OR
@@ -14,6 +15,7 @@ O JWT do Supabase contém `sub` (UUID do usuário em `auth.users`) e `email`. O 
 - Eliminar auto-atribuição de `role` no cadastro
 
 **Non-Goals:**
+
 - Criação de usuários por administradores em nome de outros
 - Fluxo de convite ou pré-cadastro
 - Mudança no mecanismo de autenticação ou na estrutura do JWT
@@ -32,7 +34,7 @@ O JwtGuard é registrado como guard global via `APP_GUARD`. Ele nunca retorna er
 'ok'             → token válido, usuário encontrado
 ```
 
-Quando `jwtStatus` é `'ok'` ou `'user-not-found'`, `request.jwtClaims = { sub, email }` é populado.
+Quando `jwtStatus` é `'ok'` ou `'user-not-found'`, `request.jwtData = { sub, email }` é populado.
 Quando `jwtStatus` é `'ok'`, `request.user = UserResponse` é populado.
 
 `jwtService.verify()` lança `TokenExpiredError` para tokens expirados e `JsonWebTokenError` para tokens inválidos — permite distinguir os dois casos sem ambiguidade.
@@ -51,7 +53,7 @@ type AccessPolicy =
 
 type RbaCondition =
   | 'self'
-  | ['minRank', number]           // rank >= n; ['minRank', 3] equivale ao antigo 'superuser'
+  | ['minRank', number] // rank >= n; ['minRank', 3] equivale ao antigo 'superuser'
   | ['sector', string | string[]]; // setor único ou um de vários
 ```
 
@@ -59,13 +61,13 @@ type RbaCondition =
 
 Mapeamento antigo → novo:
 
-| Antes | Depois |
-|---|---|
-| `mode: 'authenticated'` | `mode: 'authenticated'` |
-| `mode: 'superuser-or-self'` | `mode: 'authenticated', rba: [['minRank', 3], 'self']` |
-| `mode: 'superuser-only'` | `mode: 'authenticated', rba: [['minRank', 3]]` |
-| `mode: 'superuser-only', noSelfAccess: true` | `mode: 'authenticated', rba: [['minRank', 3]]` |
-| `mode: 'min-rank', minRank: 2` | `mode: 'authenticated', rba: [['minRank', 2]]` |
+| Antes                                        | Depois                                                 |
+| -------------------------------------------- | ------------------------------------------------------ |
+| `mode: 'authenticated'`                      | `mode: 'authenticated'`                                |
+| `mode: 'superuser-or-self'`                  | `mode: 'authenticated', rba: [['minRank', 3], 'self']` |
+| `mode: 'superuser-only'`                     | `mode: 'authenticated', rba: [['minRank', 3]]`         |
+| `mode: 'superuser-only', noSelfAccess: true` | `mode: 'authenticated', rba: [['minRank', 3]]`         |
+| `mode: 'min-rank', minRank: 2`               | `mode: 'authenticated', rba: [['minRank', 2]]`         |
 
 `'superuser'` como modo nomeado é eliminado — é apenas `['minRank', 3]`. O flag `noSelfAccess` desaparece — ausência de `'self'` no `rba` expressa a mesma semântica.
 
@@ -91,7 +93,7 @@ O controller nunca precisa tratar os casos de acesso negado — o guard já os i
 
 ### D4 — `id` de `public.users` = `sub` do JWT
 
-O endpoint `POST /users` usa `request.jwtClaims.sub` como `id` na inserção. Cria referência direta entre `auth.users.id` e `public.users.id` sem tabela de mapeamento.
+O endpoint `POST /users` usa `request.jwtData.sub` como `id` na inserção. Cria referência direta entre `auth.users.id` e `public.users.id` sem tabela de mapeamento.
 
 ### D5 — `role` fixo em `'consultor'` no service, removido do body
 

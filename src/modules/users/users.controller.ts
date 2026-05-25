@@ -17,43 +17,41 @@ import { Request } from 'express';
 import {
   RoutePolicyGuard,
   type ResolvedPolicy,
-} from '../auth/route-policy.guard';
-import { RoleSerializerInterceptor } from '../auth/role-serializer.interceptor';
-import { RoutePolicy } from '../auth/decorators/route-policy.decorator';
-import type { JwtClaims } from '../auth/jwt.guard';
+} from '../../common/guards/route-policy.guard';
+import { RoleSerializerInterceptor } from '../../common/interceptors/role-serializer.interceptor';
+import { RoutePolicy } from '../../common/decorators/route-policy.decorator';
+import { AuthService } from '../auth/auth.service';
+import type { JwtData } from '../../common/guards/jwt.guard';
 import { updateUserSchema, createUserSchema } from './dto/create-user.dto';
 import { UsersService } from './users.service';
 
 type PolicyRequest = Request & {
   policy?: ResolvedPolicy;
-  jwtClaims: JwtClaims;
+  jwtData: JwtData;
 };
 
 @Controller('users')
 @UseGuards(RoutePolicyGuard)
 @UseInterceptors(RoleSerializerInterceptor)
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly authService: AuthService,
+  ) {}
 
   @Post()
   @HttpCode(201)
   @RoutePolicy({ access: { mode: 'unexistent' } })
-  create(
+  async create(
     @Body() body: unknown,
     @Req() req: PolicyRequest,
   ): Promise<import('./users.service').UserResponse> {
-    const { sub, email } = req.jwtClaims;
-    if (
-      !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-        sub,
-      )
-    ) {
-      throw new BadRequestException('Token sub must be a valid UUID');
-    }
+    const { sub } = req.jwtData;
     const result = createUserSchema.safeParse(body);
     if (!result.success) {
       throw new BadRequestException(result.error.flatten());
     }
+    const email = await this.authService.getAuthEmail(sub);
     return this.usersService.create(sub, email, result.data);
   }
 

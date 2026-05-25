@@ -1,98 +1,108 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# WattAPI
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+API REST da **Watt Consultoria**, Empresa Júnior de Engenharia Elétrica. Desenvolvida com [NestJS](https://nestjs.com/) e [Supabase](https://supabase.com/), fornece o backend centralizado para gerenciamento de membros e operações internas da EJ.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Visão geral
 
-## Description
+A API expõe endpoints para autenticação, gerenciamento de usuários e monitoramento de saúde do serviço. O controle de acesso é baseado em JWT e em uma hierarquia de cargos interna, onde cada cargo possui um nível de permissão diferente.
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+### Hierarquia de cargos
 
-## Project setup
+| Cargo      | Rank |
+| ---------- | ---- |
+| Consultor  | 0    |
+| Gerente    | 1    |
+| Diretor    | 2    |
+| Assessor   | 3    |
+| Presidente | 4    |
 
-```bash
-$ npm install
-```
+Cargos com rank ≥ 3 (Assessor e Presidente) são considerados **superusuários** e possuem acesso irrestrito às operações administrativas.
 
-## Compile and run the project
+## Endpoints
 
-```bash
-# development
-$ npm run start
+### Status
 
-# watch mode
-$ npm run start:dev
+- `GET /status` — verifica a saúde da API e da conexão com o banco de dados. Público.
 
-# production mode
-$ npm run start:prod
-```
+### Autenticação
 
-## Run tests
+- `GET /auth/me` — retorna os dados do usuário autenticado. Requer JWT válido.
 
-```bash
-# unit tests
-$ npm run test
+### Usuários
 
-# e2e tests
-$ npm run test:e2e
+- `POST /users` — cria o perfil de um novo membro (requer conta já existente na camada de autenticação do Supabase).
+- `GET /users` — lista todos os usuários ativos. Requer autenticação.
+- `GET /users/:user_id` — retorna um usuário específico. Requer autenticação.
+- `PATCH /users/:user_id` — atualiza dados de um usuário. Membros comuns só editam o próprio perfil (campos limitados); superusuários editam qualquer perfil.
+- `DELETE /users/:user_id` — desativa um usuário. Requer rank ≥ 3.
 
-# test coverage
-$ npm run test:cov
-```
+## Stack
 
-## Deployment
+- **Runtime:** Node.js
+- **Framework:** NestJS 11
+- **Banco de dados:** PostgreSQL via Supabase (local com Supabase CLI)
+- **Autenticação:** JWT + Supabase Auth
+- **Validação:** Zod
+- **Testes:** Jest + Supertest
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+## Configuração local
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+### Pré-requisitos
+
+- Node.js
+- Docker (para o Supabase local)
+- [Supabase CLI](https://supabase.com/docs/guides/cli)
+
+### Instalação
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+npm install
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+### Variáveis de ambiente
 
-## Resources
+Crie um arquivo `.env` na raiz do projeto com base no `.env.example`. As variáveis necessárias incluem as credenciais do Supabase local e a chave secreta do JWT.
 
-Check out a few resources that may come in handy when working with NestJS:
+### Executar em desenvolvimento
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+```bash
+# Sobe o banco, aplica as migrations e inicia a API em modo watch
+npm run start:dev
+```
 
-## Support
+### Migrations
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+```bash
+# Criar uma nova migration
+npm run services:migration:create <nome>
 
-## Stay in touch
+# Aplicar migrations pendentes
+npm run services:migration:up
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+# Resetar o banco (reaplica todas as migrations)
+npm run services:db:reset
+```
 
-## License
+## Testes
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+```bash
+# Todos os testes (sobe o banco automaticamente)
+npm test
+
+# Testes em modo watch (sem subir serviços)
+npm run test:watch
+
+# Cobertura
+npm run test:cov
+```
+
+## Build para produção
+
+```bash
+npm run build
+npm run start:prod
+```
+
+## Licença
+
+Uso interno — Watt Consultoria.

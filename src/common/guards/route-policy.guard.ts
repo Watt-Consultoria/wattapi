@@ -9,14 +9,14 @@ import {
 import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
 import { DatabaseService } from '../../database/database.service';
-import type { UserResponse } from '../users/users.service';
+import type { UserResponse } from '../../modules/users/users.service';
 import { getRank, isSuperuser } from './role-hierarchy';
-import type { JwtClaims, JwtStatus } from './jwt.guard';
+import type { JwtData, JwtStatus } from './jwt.guard';
 import {
   ROUTE_POLICY_KEY,
   type RbaCondition,
   type RoutePolicyOptions,
-} from './decorators/route-policy.decorator';
+} from '../decorators/route-policy.decorator';
 
 export interface ResolvedPolicy {
   canAccess: true;
@@ -25,7 +25,7 @@ export interface ResolvedPolicy {
 
 type PolicyRequest = Request & {
   jwtStatus: JwtStatus;
-  jwtClaims?: JwtClaims;
+  jwtData?: JwtData;
   user?: UserResponse;
   policy: ResolvedPolicy;
   params: Record<string, string>;

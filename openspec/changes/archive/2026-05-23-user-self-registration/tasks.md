@@ -18,12 +18,12 @@
 - [x] 3.3 Detectar ausência de Authorization header → setar `jwtStatus = 'no-token'` e retornar
 - [x] 3.4 Capturar `TokenExpiredError` de `jwtService.verify()` → setar `jwtStatus = 'token-expired'` e retornar
 - [x] 3.5 Capturar outros erros de `jwtService.verify()` → setar `jwtStatus = 'token-invalid'` e retornar
-- [x] 3.6 Em token válido: popular `request.jwtClaims = { sub, email }`; tentar `authService.resolveUser(email)` via try/catch; se não encontrar → `jwtStatus = 'user-not-found'`; se encontrar → `jwtStatus = 'ok'` e popular `request.user`
+- [x] 3.6 Em token válido: popular `request.jwtData = { sub, email }`; tentar `authService.resolveUser(email)` via try/catch; se não encontrar → `jwtStatus = 'user-not-found'`; se encontrar → `jwtStatus = 'ok'` e popular `request.user`
 - [x] 3.7 Registrar `JwtGuard` como guard global em `src/app.module.ts` via `{ provide: APP_GUARD, useClass: JwtGuard }`; remover `@UseGuards(JwtGuard)` dos controllers
 
 ## 4. Reescrever RoutePolicyGuard
 
-- [x] 4.1 Implementar avaliação de `mode`: `unauthenticated` (sempre passa), `unexistent` (requer jwtClaims, rejeita se user existe), `authenticated` (requer request.user)
+- [x] 4.1 Implementar avaliação de `mode`: `unauthenticated` (sempre passa), `unexistent` (requer jwtData, rejeita se user existe), `authenticated` (requer request.user)
 - [x] 4.2 Implementar mensagens de erro contextuais por `jwtStatus` antes de avaliar `mode`: `'no-token'` → 401, `'token-expired'` → 401, `'token-invalid'` → 401, `'user-not-found'` com `mode: 'authenticated'` → 401, `'ok'` com `mode: 'unexistent'` → 409
 - [x] 4.3 Implementar avaliação de `rba` com lógica OR: iterar as condições e retornar `true` ao primeiro satisfeito; se nenhuma → 403
 - [x] 4.4 Implementar condição `'self'`: `caller.id === params.user_id`
@@ -34,7 +34,7 @@
 
 - [x] 5.1 Em `src/modules/users/dto/create-user.dto.ts`, remover `email` e `role` de `createUserSchema`; manter `name`, `sector`, `cpf` obrigatórios
 - [x] 5.2 Em `src/modules/users/users.service.ts`, alterar `create()` para receber `id: string` e `email: string` como parâmetros adicionais e hardcodar `role = 'consultor'`
-- [x] 5.3 Em `src/modules/users/users.controller.ts`, atualizar `POST /users`: usar `mode: ['unexistent']`, ler `req.jwtClaims.sub` e `req.jwtClaims.email` e passar para `usersService.create()`
+- [x] 5.3 Em `src/modules/users/users.controller.ts`, atualizar `POST /users`: usar `mode: ['unexistent']`, ler `req.jwtData.sub` e `req.jwtData.email` e passar para `usersService.create()`
 - [x] 5.4 Atualizar todos os demais `@RoutePolicy` no controller para a nova estrutura: `mode: 'authenticated'` sem rba para rotas abertas a todos, `rba: [['minRank', 3], 'self']` para `PATCH`, `rba: [['minRank', 3]]` para `DELETE`
 
 ## 6. Finalização
