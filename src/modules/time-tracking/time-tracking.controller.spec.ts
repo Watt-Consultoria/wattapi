@@ -10,7 +10,7 @@ config({
   quiet: true,
 });
 
-const BASE_URL = 'http://localhost:3000/time-tracking';
+const BASE_URL = 'http://localhost:3000/time-entries';
 const JWT_SECRET =
   process.env.JWT_SECRET ??
   'your-super-secret-jwt-key-with-at-least-32-characters';
@@ -48,9 +48,9 @@ afterAll(async () => {
   await orchestrator.clearDatabase();
 });
 
-// ─── POST /time-tracking/clock-in ───────────────────────────────────────────
+// ─── POST /time-entries/clock-in ────────────────────────────────────────────
 
-describe('POST /time-tracking/clock-in', () => {
+describe('POST /time-entries/clock-in', () => {
   it('should return HTTP 401 when no token is provided', async () => {
     const res = await fetch(`${BASE_URL}/clock-in`, { method: 'POST' });
     expect(res.status).toBe(401);
@@ -97,9 +97,9 @@ describe('POST /time-tracking/clock-in', () => {
   });
 });
 
-// ─── POST /time-tracking/clock-out ──────────────────────────────────────────
+// ─── POST /time-entries/clock-out ───────────────────────────────────────────
 
-describe('POST /time-tracking/clock-out', () => {
+describe('POST /time-entries/clock-out', () => {
   it('should return HTTP 401 when no token is provided', async () => {
     const res = await fetch(`${BASE_URL}/clock-out`, { method: 'POST' });
     expect(res.status).toBe(401);
@@ -164,17 +164,17 @@ describe('POST /time-tracking/clock-out', () => {
   });
 });
 
-// ─── GET /time-tracking/summary ─────────────────────────────────────────────
+// ─── GET /time-entries/summary/me ───────────────────────────────────────────
 
-describe('GET /time-tracking/summary', () => {
+describe('GET /time-entries/summary/me', () => {
   it('should return HTTP 401 when no token is provided', async () => {
-    const res = await fetch(`${BASE_URL}/summary`);
+    const res = await fetch(`${BASE_URL}/summary/me`);
     expect(res.status).toBe(401);
   });
 
   it('should return HTTP 200 for the authenticated user', async () => {
     const user = seededUsers[0];
-    const res = await fetch(`${BASE_URL}/summary`, {
+    const res = await fetch(`${BASE_URL}/summary/me`, {
       headers: authHeaders(user.id),
     });
     expect(res.status).toBe(200);
@@ -182,7 +182,7 @@ describe('GET /time-tracking/summary', () => {
 
   it('should return current_session none when no open session', async () => {
     const user = seededUsers[0];
-    const res = await fetch(`${BASE_URL}/summary`, {
+    const res = await fetch(`${BASE_URL}/summary/me`, {
       headers: authHeaders(user.id),
     });
     const body = (await res.json()) as {
@@ -201,7 +201,7 @@ describe('GET /time-tracking/summary', () => {
 
     await fetch(`${BASE_URL}/clock-in`, { method: 'POST', headers });
 
-    const res = await fetch(`${BASE_URL}/summary`, { headers });
+    const res = await fetch(`${BASE_URL}/summary/me`, { headers });
     const body = (await res.json()) as {
       current_session: { status: string; elapsed_minutes: number };
     };
@@ -217,7 +217,7 @@ describe('GET /time-tracking/summary', () => {
       [user.id],
     );
 
-    const res = await fetch(`${BASE_URL}/summary`, {
+    const res = await fetch(`${BASE_URL}/summary/me`, {
       headers: authHeaders(user.id),
     });
     const body = (await res.json()) as {
@@ -225,26 +225,6 @@ describe('GET /time-tracking/summary', () => {
     };
     expect(body.current_session.status).toBe('invalid');
     expect(body.current_session.reason).toBe('exceeded_max_duration');
-  });
-
-  it('should return HTTP 403 when non-superuser requests another user summary', async () => {
-    const consultor = seededUsers[0];
-    const another = seededUsers[1];
-
-    const res = await fetch(`${BASE_URL}/summary?user_id=${another.id}`, {
-      headers: authHeaders(consultor.id),
-    });
-    expect(res.status).toBe(403);
-  });
-
-  it('should return HTTP 200 when superuser requests another user summary', async () => {
-    const superuser = seededUsers[3]; // assessor
-    const target = seededUsers[0];
-
-    const res = await fetch(`${BASE_URL}/summary?user_id=${target.id}`, {
-      headers: authHeaders(superuser.id),
-    });
-    expect(res.status).toBe(200);
   });
 
   it('should include valid sessions in the weekly total', async () => {
@@ -256,7 +236,7 @@ describe('GET /time-tracking/summary', () => {
       [user.id],
     );
 
-    const res = await fetch(`${BASE_URL}/summary`, {
+    const res = await fetch(`${BASE_URL}/summary/me`, {
       headers: authHeaders(user.id),
     });
     const body = (await res.json()) as {
@@ -277,7 +257,7 @@ describe('GET /time-tracking/summary', () => {
       [user.id],
     );
 
-    const res = await fetch(`${BASE_URL}/summary`, {
+    const res = await fetch(`${BASE_URL}/summary/me`, {
       headers: authHeaders(user.id),
     });
     const body = (await res.json()) as {
@@ -286,5 +266,35 @@ describe('GET /time-tracking/summary', () => {
     };
     expect(body.valid_sessions).toHaveLength(0);
     expect(body.total_minutes).toBe(0);
+  });
+});
+
+// ─── GET /time-entries/summary/:userId ──────────────────────────────────────
+
+describe('GET /time-entries/summary/:userId', () => {
+  it('should return HTTP 401 when no token is provided', async () => {
+    const target = seededUsers[0];
+    const res = await fetch(`${BASE_URL}/summary/${target.id}`);
+    expect(res.status).toBe(401);
+  });
+
+  it('should return HTTP 403 when non-superuser requests another user summary', async () => {
+    const consultor = seededUsers[0];
+    const another = seededUsers[1];
+
+    const res = await fetch(`${BASE_URL}/summary/${another.id}`, {
+      headers: authHeaders(consultor.id),
+    });
+    expect(res.status).toBe(403);
+  });
+
+  it('should return HTTP 200 when superuser requests another user summary', async () => {
+    const superuser = seededUsers[3]; // assessor
+    const target = seededUsers[0];
+
+    const res = await fetch(`${BASE_URL}/summary/${target.id}`, {
+      headers: authHeaders(superuser.id),
+    });
+    expect(res.status).toBe(200);
   });
 });

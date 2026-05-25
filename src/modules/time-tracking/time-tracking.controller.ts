@@ -3,8 +3,8 @@ import {
   ForbiddenException,
   Get,
   HttpCode,
+  Param,
   Post,
-  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -26,7 +26,7 @@ type PolicyRequest = Request & {
   user: UserResponse;
 };
 
-@Controller('time-tracking')
+@Controller('time-entries')
 @UseGuards(RoutePolicyGuard)
 export class TimeTrackingController {
   constructor(private readonly timeTrackingService: TimeTrackingService) {}
@@ -45,17 +45,28 @@ export class TimeTrackingController {
     return this.timeTrackingService.clockOut(req.jwtData.sub);
   }
 
-  @Get('summary')
+  @Get('summary/me')
   @RoutePolicy({ access: { mode: 'authenticated' } })
-  summary(
+  summaryMe(@Req() req: PolicyRequest): Promise<SummaryResponse> {
+    const requesterId = req.jwtData.sub;
+    const requesterRole = req.user.role;
+    return this.timeTrackingService.getSummary(
+      requesterId,
+      requesterRole,
+      requesterId,
+    );
+  }
+
+  @Get('summary/:userId')
+  @RoutePolicy({ access: { mode: 'authenticated' } })
+  summaryByUserId(
     @Req() req: PolicyRequest,
-    @Query('user_id') userId?: string,
+    @Param('userId') userId: string,
   ): Promise<SummaryResponse> {
     const requesterId = req.jwtData.sub;
     const requesterRole = req.user.role;
-    const targetUserId = userId ?? requesterId;
 
-    if (targetUserId !== requesterId && !isSuperuser(requesterRole)) {
+    if (!isSuperuser(requesterRole)) {
       throw new ForbiddenException(
         'Acesso negado: apenas superusuários podem ver o resumo de outros usuários',
       );
@@ -64,7 +75,7 @@ export class TimeTrackingController {
     return this.timeTrackingService.getSummary(
       requesterId,
       requesterRole,
-      targetUserId,
+      userId,
     );
   }
 }

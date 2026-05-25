@@ -1,4 +1,6 @@
-## Requirement: Clock-in — iniciar sessão de trabalho
+## MODIFIED Requirements
+
+### Requirement: Clock-in — iniciar sessão de trabalho
 
 O sistema SHALL expor `POST /time-entries/clock-in` que cria uma nova sessão de trabalho para o usuário autenticado. O endpoint não aceita request body — o timestamp de entrada é sempre gerado pelo banco via `now()`.
 
@@ -16,7 +18,7 @@ O sistema SHALL expor `POST /time-entries/clock-in` que cria uma nova sessão de
 
 ---
 
-## Requirement: Clock-out — encerrar sessão de trabalho
+### Requirement: Clock-out — encerrar sessão de trabalho
 
 O sistema SHALL expor `POST /time-entries/clock-out` que encerra a sessão aberta do usuário autenticado, marcando-a como válida ou anulada conforme a duração. O endpoint não aceita request body — o timestamp de saída é sempre gerado pelo banco via `now()`.
 
@@ -57,7 +59,7 @@ O sistema SHALL expor `POST /time-entries/clock-out` que encerra a sessão abert
 
 ---
 
-## Requirement: Summary do próprio usuário
+### Requirement: Summary do próprio usuário
 
 O sistema SHALL expor `GET /time-entries/summary/me` que retorna as sessões válidas da semana corrente (segunda a domingo) e o estado da sessão atual do usuário autenticado.
 
@@ -83,18 +85,25 @@ O sistema SHALL expor `GET /time-entries/summary/me` que retorna as sessões vá
 
 ---
 
-## Requirement: Summary de outro usuário — superusuário
+### Requirement: Summary de outro usuário — superusuário
 
-O sistema SHALL expor `GET /time-entries/summary/:userId` que retorna o summary da semana corrente do usuário especificado no path, restrito a superusuários (rank >= 3).
+O sistema SHALL expor `GET /time-entries/summary/:userId` que retorna o summary da semana corrente do usuário especificado no path, restrito a superusuários.
 
 #### Scenario: Summary de outro usuário — superusuário
 - **WHEN** usuário com rank >= 3 faz `GET /time-entries/summary/:userId`
 - **THEN** o sistema SHALL retornar HTTP 200 com o summary do usuário solicitado
 
 #### Scenario: Summary de outro usuário — sem permissão
-- **WHEN** usuário com rank < 3 faz `GET /time-entries/summary/:userId`
+- **WHEN** usuário com rank < 3 faz `GET /time-entries/summary/:userId` de outro usuário
 - **THEN** o sistema SHALL retornar HTTP 403
 
 #### Scenario: Usuário não autenticado
 - **WHEN** o request não possui token JWT válido
 - **THEN** o sistema SHALL retornar HTTP 401
+
+## REMOVED Requirements
+
+### Requirement: Summary — resumo semanal
+
+**Reason:** Substituído por dois endpoints distintos: `GET /time-entries/summary/me` para o próprio usuário e `GET /time-entries/summary/:userId` para superusuários consultando outros usuários. O mecanismo de `?user_id` query param foi removido em favor de path params explícitos.
+**Migration:** Substituir `GET /time-tracking/summary` por `GET /time-entries/summary/me`. Para consulta de outro usuário, usar `GET /time-entries/summary/:userId`.
