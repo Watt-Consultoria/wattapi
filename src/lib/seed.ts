@@ -122,6 +122,7 @@ export async function seedUsers(pool: Pool): Promise<SeedUser[]> {
 }
 
 export async function clearUsers(pool: Pool): Promise<void> {
+  await pool.query('DELETE FROM time_entries');
   await pool.query('DELETE FROM users');
   await pool.query(`DELETE FROM auth.users WHERE id = ANY($1::uuid[])`, [
     ALL_TEST_IDS,
