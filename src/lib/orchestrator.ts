@@ -52,8 +52,19 @@ async function clearDatabase(): Promise<void> {
   await clearUsers(getPool());
 }
 
+async function clearTimeEntries(): Promise<void> {
+  await getPool().query('DELETE FROM time_entries');
+}
+
+async function end(): Promise<void> {
+  await pool?.end();
+  pool = null;
+}
+
 export default {
   waitForAllServices,
   seedDatabase,
   clearDatabase,
+  clearTimeEntries,
+  end,
 };
