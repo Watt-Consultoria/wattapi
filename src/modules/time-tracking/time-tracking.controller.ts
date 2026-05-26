@@ -53,7 +53,7 @@ type PolicyRequest = Request & {
 export class TimeTrackingController {
   constructor(private readonly timeTrackingService: TimeTrackingService) {}
 
-  @Get('/summary')
+  @Get()
   @RoutePolicy({ access: { mode: 'authenticated' } })
   @ApiOperation({
     summary: 'Resumo semanal de toda a equipe',

@@ -35,6 +35,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await orchestrator.clearDatabase();
+  await orchestrator.end();
 });
 
 describe('GET /users', () => {

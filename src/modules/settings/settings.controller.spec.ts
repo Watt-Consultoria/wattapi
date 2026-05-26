@@ -42,6 +42,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await orchestrator.clearDatabase();
+  await orchestrator.end();
 });
 
 afterEach(async () => {

@@ -46,6 +46,7 @@ afterEach(async () => {
 afterAll(async () => {
   await pool.end();
   await orchestrator.clearDatabase();
+  await orchestrator.end();
 });
 
 // ─── POST /time-entries/clock-in ────────────────────────────────────────────
