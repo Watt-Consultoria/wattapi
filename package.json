@@ -19,7 +19,7 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "prepare": "husky",
-    "services:db:start": "supabase start -x gotrue,realtime,storage-api,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor --workdir ./src/database/",
+    "services:db:start": "supabase start -x realtime,storage-api,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor --workdir ./src/database/",
     "services:db:stop": "supabase stop --workdir ./src/database/",
     "services:db:reset": "supabase db reset --workdir ./src/database/",
     "services:migration:create": "supabase migration new --workdir ./src/database/",
