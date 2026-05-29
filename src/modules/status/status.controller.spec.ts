@@ -1,7 +1,7 @@
 import orchestrator from '../../lib/orchestrator';
 import { StatusResponse } from './status.service';
 
-const STATUS_URL = 'http://localhost:3000/status';
+const STATUS_URL = 'http://localhost:3001/status';
 
 describe('GET /status', () => {
   beforeAll(async () => {

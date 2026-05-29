@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { TokenExpiredError } from 'jsonwebtoken';
 import { JwtGuard } from './jwt.guard';
 import { AuthService } from '../../modules/auth/auth.service';
+import { EnvService } from '../../config/env.service';
 import type { UserResponse } from '../../modules/users/users.service';
 
 function makeUser(): UserResponse {
@@ -33,10 +34,12 @@ function makeContext(authHeader?: string) {
 describe('JwtGuard', () => {
   let jwtService: jest.Mocked<Pick<JwtService, 'verify'>>;
   let authService: jest.Mocked<Pick<AuthService, 'resolveUser'>>;
+  let envService: jest.Mocked<Pick<EnvService, 'get'>>;
 
   beforeEach(() => {
     jwtService = { verify: jest.fn() };
     authService = { resolveUser: jest.fn() };
+    envService = { get: jest.fn().mockReturnValue('http://127.0.0.1:54321') };
   });
 
   it('sets jwtStatus=token-invalid when sub is not a valid UUID', async () => {
@@ -47,6 +50,7 @@ describe('JwtGuard', () => {
     const guard = new JwtGuard(
       jwtService as unknown as JwtService,
       authService as unknown as AuthService,
+      envService as unknown as EnvService,
     );
     const result = await guard.canActivate(context);
     expect(result).toBe(true);
@@ -65,6 +69,7 @@ describe('JwtGuard', () => {
     const guard = new JwtGuard(
       jwtService as unknown as JwtService,
       authService as unknown as AuthService,
+      envService as unknown as EnvService,
     );
     await guard.canActivate(context);
     expect(authService.resolveUser).toHaveBeenCalledWith(validSub);
@@ -82,6 +87,7 @@ describe('JwtGuard', () => {
     const guard = new JwtGuard(
       jwtService as unknown as JwtService,
       authService as unknown as AuthService,
+      envService as unknown as EnvService,
     );
     await guard.canActivate(context);
     expect(request.jwtData).toEqual({ sub: validSub });
@@ -93,6 +99,7 @@ describe('JwtGuard', () => {
     const guard = new JwtGuard(
       jwtService as unknown as JwtService,
       authService as unknown as AuthService,
+      envService as unknown as EnvService,
     );
     const result = await guard.canActivate(context);
     expect(result).toBe(true);
@@ -106,6 +113,7 @@ describe('JwtGuard', () => {
     const guard = new JwtGuard(
       jwtService as unknown as JwtService,
       authService as unknown as AuthService,
+      envService as unknown as EnvService,
     );
     const result = await guard.canActivate(context);
     expect(result).toBe(true);
@@ -120,6 +128,7 @@ describe('JwtGuard', () => {
     const guard = new JwtGuard(
       jwtService as unknown as JwtService,
       authService as unknown as AuthService,
+      envService as unknown as EnvService,
     );
     const result = await guard.canActivate(context);
     expect(result).toBe(true);
@@ -136,6 +145,7 @@ describe('JwtGuard', () => {
     const guard = new JwtGuard(
       jwtService as unknown as JwtService,
       authService as unknown as AuthService,
+      envService as unknown as EnvService,
     );
     const result = await guard.canActivate(context);
     expect(result).toBe(true);
@@ -152,6 +162,7 @@ describe('JwtGuard', () => {
     const guard = new JwtGuard(
       jwtService as unknown as JwtService,
       authService as unknown as AuthService,
+      envService as unknown as EnvService,
     );
     const result = await guard.canActivate(context);
     expect(result).toBe(true);
@@ -169,6 +180,7 @@ describe('JwtGuard', () => {
     const guard = new JwtGuard(
       jwtService as unknown as JwtService,
       authService as unknown as AuthService,
+      envService as unknown as EnvService,
     );
     const result = await guard.canActivate(context);
     expect(result).toBe(true);

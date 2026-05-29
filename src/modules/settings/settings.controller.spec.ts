@@ -9,7 +9,7 @@ config({
   quiet: true,
 });
 
-const BASE_URL = 'http://localhost:3000/settings';
+const BASE_URL = 'http://localhost:3001/settings';
 const JWT_SECRET =
   process.env.JWT_SECRET ??
   'your-super-secret-jwt-key-with-at-least-32-characters';

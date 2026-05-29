@@ -4,6 +4,7 @@ import { AppConfigModule } from '../../config/config.module';
 import { DatabaseModule } from '../../database/database.module';
 import { EnvService } from '../../config/env.service';
 import { JwtGuard } from '../../common/guards/jwt.guard';
+
 import { RoutePolicyGuard } from '../../common/guards/route-policy.guard';
 import { RoleSerializerInterceptor } from '../../common/interceptors/role-serializer.interceptor';
 import { AuthController } from './auth.controller';

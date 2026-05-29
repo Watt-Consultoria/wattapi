@@ -9,6 +9,17 @@ async function bootstrap() {
   const envService = app.get(EnvService);
   const PORT = envService.get('PORT');
 
+  app.enableCors({
+    origin: [
+      'http://localhost:3001',
+      'http://127.0.0.1:3000',
+      'https://wattdash.wattconsultoria.com.br',
+      'https://new-watt-dash.vercel.app',
+      /^https?:\/\/.*\.vercel\.app$/,
+    ],
+    credentials: true,
+  });
+
   const config = new DocumentBuilder()
     .setTitle('WattAPI')
     .setVersion('1.0')

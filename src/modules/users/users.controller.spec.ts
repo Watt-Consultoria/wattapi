@@ -2,7 +2,7 @@ import * as jwt from 'jsonwebtoken';
 import orchestrator from '../../lib/orchestrator';
 import type { SeedUser } from '../../lib/seed';
 
-const BASE_URL = 'http://localhost:3000/users';
+const BASE_URL = 'http://localhost:3001/users';
 const JWT_SECRET =
   process.env.JWT_SECRET ??
   'your-super-secret-jwt-key-with-at-least-32-characters';

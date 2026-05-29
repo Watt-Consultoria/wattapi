@@ -1,7 +1,14 @@
-import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
+import {
+  CanActivate,
+  ExecutionContext,
+  Injectable,
+  OnModuleInit,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { TokenExpiredError } from 'jsonwebtoken';
 import { Request } from 'express';
+import { createRemoteJWKSet, jwtVerify } from 'jose';
+import { EnvService } from '../../config/env.service';
 import { AuthService } from '../../modules/auth/auth.service';
 import type { UserResponse } from '../../modules/users/users.service';
 
@@ -29,12 +36,32 @@ export type EnrichedRequest = Request & {
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+function getAlgorithm(token: string): string | null {
+  try {
+    const header = JSON.parse(
+      Buffer.from(token.split('.')[0], 'base64url').toString(),
+    ) as { alg?: string };
+    return header.alg ?? null;
+  } catch {
+    return null;
+  }
+}
+
 @Injectable()
-export class JwtGuard implements CanActivate {
+export class JwtGuard implements CanActivate, OnModuleInit {
+  private jwks: ReturnType<typeof createRemoteJWKSet> | null = null;
+
   constructor(
     private readonly jwtService: JwtService,
     private readonly authService: AuthService,
+    private readonly envService: EnvService,
   ) {}
+
+  onModuleInit() {
+    const supabaseUrl = this.envService.get('SUPABASE_URL');
+    const jwksUrl = new URL(`${supabaseUrl}/auth/v1/.well-known/jwks.json`);
+    this.jwks = createRemoteJWKSet(jwksUrl);
+  }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<EnrichedRequest>();
@@ -46,13 +73,23 @@ export class JwtGuard implements CanActivate {
     }
 
     const token = authHeader.slice(7);
+    const alg = getAlgorithm(token);
 
     let payload: JwtPayload;
     try {
-      payload = this.jwtService.verify<JwtPayload>(token);
+      if (alg === 'ES256' && this.jwks) {
+        const { payload: p } = await jwtVerify(token, this.jwks);
+        if (typeof p.sub !== 'string') throw new Error('missing sub');
+        payload = { sub: p.sub };
+      } else {
+        payload = this.jwtService.verify<JwtPayload>(token);
+      }
     } catch (err) {
       request.jwtStatus =
-        err instanceof TokenExpiredError ? 'token-expired' : 'token-invalid';
+        err instanceof TokenExpiredError ||
+        (err instanceof Error && err.message.includes('expired'))
+          ? 'token-expired'
+          : 'token-invalid';
       return true;
     }
 

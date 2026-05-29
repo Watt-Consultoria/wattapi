@@ -2,7 +2,7 @@ import * as jwt from 'jsonwebtoken';
 import orchestrator from '../../lib/orchestrator';
 import type { SeedUser } from '../../lib/seed';
 
-const BASE_URL = 'http://localhost:3000/auth/me';
+const BASE_URL = 'http://localhost:3001/auth/me';
 const JWT_SECRET =
   process.env.JWT_SECRET ??
   'your-super-secret-jwt-key-with-at-least-32-characters';
@@ -73,7 +73,7 @@ describe('GET /auth/me', () => {
   it('should return HTTP 401 when user is inactive', async () => {
     const inactiveUser = seededUsers[5];
     const presidenteToken = signToken({ sub: seededUsers[4].id });
-    await fetch(`http://localhost:3000/users/${inactiveUser.id}`, {
+    await fetch(`http://localhost:3001/users/${inactiveUser.id}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${presidenteToken}` },
     });
