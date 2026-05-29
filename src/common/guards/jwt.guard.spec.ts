@@ -6,6 +6,21 @@ import { AuthService } from '../../modules/auth/auth.service';
 import { EnvService } from '../../config/env.service';
 import type { UserResponse } from '../../modules/users/users.service';
 
+jest.mock('jose', () => ({
+  createRemoteJWKSet: jest.fn(() => 'mocked-jwks'),
+  jwtVerify: jest.fn(),
+}));
+
+import { jwtVerify } from 'jose';
+
+function makeEs256Token(payload: Record<string, unknown> = {}): string {
+  const header = Buffer.from(
+    JSON.stringify({ alg: 'ES256', typ: 'JWT' }),
+  ).toString('base64url');
+  const body = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  return `${header}.${body}.fake-sig`;
+}
+
 function makeUser(): UserResponse {
   return {
     id: 'user-id',
@@ -40,6 +55,7 @@ describe('JwtGuard', () => {
     jwtService = { verify: jest.fn() };
     authService = { resolveUser: jest.fn() };
     envService = { get: jest.fn().mockReturnValue('http://127.0.0.1:54321') };
+    (jwtVerify as jest.Mock).mockReset();
   });
 
   it('sets jwtStatus=token-invalid when sub is not a valid UUID', async () => {
@@ -187,5 +203,106 @@ describe('JwtGuard', () => {
     expect(request.jwtStatus).toBe('ok');
     expect(request.jwtData).toEqual({ sub: validSub });
     expect(request.user).toBe(user);
+  });
+
+  describe('ES256 (Supabase JWKS)', () => {
+    beforeEach(() => {
+      (jwtVerify as jest.Mock).mockReset();
+    });
+
+    it('sets jwtStatus=ok when ES256 token is valid', async () => {
+      const user = makeUser();
+      const validSub = 'a1b2c3d4-0001-0001-0001-000000000002';
+      const token = makeEs256Token({ sub: validSub });
+      (jwtVerify as jest.Mock).mockResolvedValue({
+        payload: { sub: validSub },
+      });
+      authService.resolveUser.mockResolvedValue(user);
+      const { request, context } = makeContext(`Bearer ${token}`);
+      const guard = new JwtGuard(
+        jwtService as unknown as JwtService,
+        authService as unknown as AuthService,
+        envService as unknown as EnvService,
+      );
+      guard.onModuleInit();
+      const result = await guard.canActivate(context);
+      expect(result).toBe(true);
+      expect(request.jwtStatus).toBe('ok');
+      expect(request.jwtData).toEqual({ sub: validSub });
+      expect(request.user).toBe(user);
+      expect(jwtService.verify).not.toHaveBeenCalled();
+    });
+
+    it('sets jwtStatus=token-expired when ES256 token is expired', async () => {
+      const token = makeEs256Token({
+        sub: 'a1b2c3d4-0001-0001-0001-000000000002',
+      });
+      (jwtVerify as jest.Mock).mockRejectedValue(new Error('token expired'));
+      const { request, context } = makeContext(`Bearer ${token}`);
+      const guard = new JwtGuard(
+        jwtService as unknown as JwtService,
+        authService as unknown as AuthService,
+        envService as unknown as EnvService,
+      );
+      guard.onModuleInit();
+      const result = await guard.canActivate(context);
+      expect(result).toBe(true);
+      expect(request.jwtStatus).toBe('token-expired');
+      expect(request.jwtData).toBeUndefined();
+    });
+
+    it('sets jwtStatus=token-invalid when ES256 signature is invalid', async () => {
+      const token = makeEs256Token({
+        sub: 'a1b2c3d4-0001-0001-0001-000000000002',
+      });
+      (jwtVerify as jest.Mock).mockRejectedValue(
+        new Error('signature verification failed'),
+      );
+      const { request, context } = makeContext(`Bearer ${token}`);
+      const guard = new JwtGuard(
+        jwtService as unknown as JwtService,
+        authService as unknown as AuthService,
+        envService as unknown as EnvService,
+      );
+      guard.onModuleInit();
+      const result = await guard.canActivate(context);
+      expect(result).toBe(true);
+      expect(request.jwtStatus).toBe('token-invalid');
+      expect(request.jwtData).toBeUndefined();
+    });
+
+    it('sets jwtStatus=token-invalid when ES256 sub is not a UUID', async () => {
+      const token = makeEs256Token({ sub: 'not-a-uuid' });
+      (jwtVerify as jest.Mock).mockResolvedValue({
+        payload: { sub: 'not-a-uuid' },
+      });
+      const { request, context } = makeContext(`Bearer ${token}`);
+      const guard = new JwtGuard(
+        jwtService as unknown as JwtService,
+        authService as unknown as AuthService,
+        envService as unknown as EnvService,
+      );
+      guard.onModuleInit();
+      const result = await guard.canActivate(context);
+      expect(result).toBe(true);
+      expect(request.jwtStatus).toBe('token-invalid');
+      expect(request.jwtData).toBeUndefined();
+    });
+  });
+
+  it('does not call jwtVerify for HS256 tokens', async () => {
+    const validSub = 'a1b2c3d4-0001-0001-0001-000000000001';
+    (jwtService.verify as jest.Mock).mockReturnValue({ sub: validSub });
+    authService.resolveUser.mockResolvedValue(makeUser());
+    const { context } = makeContext('Bearer valid.token');
+    const guard = new JwtGuard(
+      jwtService as unknown as JwtService,
+      authService as unknown as AuthService,
+      envService as unknown as EnvService,
+    );
+    guard.onModuleInit();
+    await guard.canActivate(context);
+    expect(jwtVerify).not.toHaveBeenCalled();
+    expect(jwtService.verify).toHaveBeenCalled();
   });
 });
