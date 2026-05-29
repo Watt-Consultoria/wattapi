@@ -11,9 +11,10 @@ async function bootstrap() {
 
   app.enableCors({
     origin: [
-      'http://localhost:3000',
+      'http://localhost:3001',
       'http://127.0.0.1:3000',
       'https://wattdash.wattconsultoria.com.br',
+      'https://new-watt-dash.vercel.app',
       /^https?:\/\/.*\.vercel\.app$/,
     ],
     credentials: true,

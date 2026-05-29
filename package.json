@@ -95,7 +95,10 @@
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node",
-    "maxWorkers": 1
+    "maxWorkers": 1,
+    "transformIgnorePatterns": [
+      "node_modules/(?!(jose)/)"
+    ]
   },
   "config": {
     "commitizen": {
