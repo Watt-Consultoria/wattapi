@@ -9,6 +9,7 @@ import { TimeTrackingModule } from './modules/time-tracking/time-tracking.module
 import { SettingsModule } from './modules/settings/settings.module';
 import { DocsModule } from './modules/docs/docs.module';
 import { ActivitiesModule } from './modules/activities/activities.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import { JwtGuard } from './common/guards/jwt.guard';
 
 @Module({
@@ -22,6 +23,7 @@ import { JwtGuard } from './common/guards/jwt.guard';
     TimeTrackingModule,
     DocsModule,
     ActivitiesModule,
+    NotificationsModule,
   ],
   providers: [
     {

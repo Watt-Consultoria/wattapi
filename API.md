@@ -556,6 +556,116 @@ Remove permanentemente uma atividade. Apenas o dono pode deletar.
 
 ---
 
+## Notifications
+
+Notificações do usuário. Podem ser automáticas (geradas pela aplicação) ou dirigidas (criadas por superusuários). A deleção é soft delete — notificações deletadas não aparecem na listagem mas ficam armazenadas no banco.
+
+**Modelo de uma notificação**
+
+```json
+{
+  "id": "uuid",
+  "user_id": "uuid",
+  "title": "Atividade agendada para hoje: Reunião de alinhamento",
+  "description": "Alinhamento semanal do time",
+  "origin": "automatic",
+  "sent_at": "2026-05-30T03:00:00.000Z",
+  "created_by": null,
+  "created_at": "2026-05-30T03:00:00.000Z"
+}
+```
+
+| Campo        | Tipo   | Valores                   | Descrição                                          |
+| ------------ | ------ | ------------------------- | -------------------------------------------------- |
+| `origin`     | enum   | `automatic`, `directed`   | Origem da notificação                              |
+| `created_by` | UUID   | UUID ou `null`            | ID do superusuário que criou; `null` se automática |
+
+---
+
+### `GET /notifications`
+
+Lista todas as notificações não deletadas do usuário autenticado, ordenado por `sent_at DESC`.
+
+**Autenticação:** Obrigatória
+
+**Resposta 200** — Array de notificações
+
+**Resposta 401** — Token ausente ou inválido
+
+---
+
+### `DELETE /notifications/:id`
+
+Soft delete de uma notificação. Apenas o dono pode deletar.
+
+**Autenticação:** Obrigatória
+
+**Parâmetros de path**
+
+| Parâmetro | Tipo | Descrição           |
+| --------- | ---- | ------------------- |
+| `id`      | UUID | ID da notificação   |
+
+**Resposta 204** — Notificação deletada
+
+**Resposta 401** — Token ausente ou inválido
+
+**Resposta 403** — Usuário não é o dono da notificação
+
+**Resposta 404** — Notificação não encontrada ou já deletada
+
+---
+
+### `POST /notifications`
+
+Cria notificações dirigidas para um grupo de usuários. Exclusivo para superusuários (assessor ou presidente, rank ≥ 3). Uma notificação é criada para cada usuário ativo que corresponder ao filtro `target`. Target vazio (`{}`) envia para todos os usuários ativos.
+
+**Autenticação:** Obrigatória — requer superusuário (rank ≥ 3)
+
+**Body**
+
+```json
+{
+  "title": "Aviso importante",
+  "description": "Texto opcional da notificação",
+  "target": {
+    "sector": "comercial",
+    "role": "diretor"
+  }
+}
+```
+
+| Campo              | Tipo   | Obrigatório | Descrição                                              |
+| ------------------ | ------ | ----------- | ------------------------------------------------------ |
+| `title`            | string | sim         | Mínimo 1 caractere                                     |
+| `description`      | string | não         | Texto livre                                            |
+| `target`           | objeto | sim         | Filtro de destinatários — ambos os campos opcionais    |
+| `target.sector`    | string | não         | Filtra por setor                                       |
+| `target.role`      | enum   | não         | Filtra por role: `consultor`, `gerente`, `diretor`, `assessor`, `presidente` |
+
+**Lógica de `target`:**
+
+| target                            | Destinatários                                    |
+| --------------------------------- | ------------------------------------------------ |
+| `{}`                              | Todos os usuários ativos                         |
+| `{ sector: "comercial" }`         | Todos os ativos do setor comercial               |
+| `{ role: "diretor" }`             | Todos os diretores ativos                        |
+| `{ sector: "comercial", role: "diretor" }` | Diretor(es) do setor comercial          |
+
+**Resposta 201**
+
+```json
+{ "count": 5 }
+```
+
+**Resposta 400** — Campos inválidos ou `title` ausente
+
+**Resposta 401** — Token ausente ou inválido
+
+**Resposta 403** — Usuário não é superusuário (rank < 3)
+
+---
+
 ## Status
 
 ### `GET /status`
