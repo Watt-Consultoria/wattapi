@@ -71,6 +71,14 @@ const FAKE_USERS = [
     sector: 'comercial',
     cpf: '77766655544',
   },
+  {
+    id: '10000000-0007-0007-0007-000000000007',
+    email: 'paulo.projetos@watt.com',
+    name: 'Paulo Projetos',
+    role: 'consultor',
+    sector: 'projetos',
+    cpf: '44455566677',
+  },
 ];
 
 // Auth-only entries: exist in auth.users but not yet in public.users (for POST /users tests)
@@ -88,6 +96,7 @@ const ALL_TEST_IDS = [
 ];
 
 export async function seedUsers(pool: Pool): Promise<SeedUser[]> {
+  await pool.query('DELETE FROM activities');
   await pool.query('DELETE FROM users');
   await pool.query(`DELETE FROM auth.users WHERE id = ANY($1::uuid[])`, [
     ALL_TEST_IDS,
@@ -122,6 +131,7 @@ export async function seedUsers(pool: Pool): Promise<SeedUser[]> {
 }
 
 export async function clearUsers(pool: Pool): Promise<void> {
+  await pool.query('DELETE FROM activities');
   await pool.query('DELETE FROM time_entries');
   await pool.query('DELETE FROM users');
   await pool.query(`DELETE FROM auth.users WHERE id = ANY($1::uuid[])`, [
