@@ -7,6 +7,8 @@ import { UsersModule } from './modules/users/users.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { TimeTrackingModule } from './modules/time-tracking/time-tracking.module';
 import { SettingsModule } from './modules/settings/settings.module';
+import { DocsModule } from './modules/docs/docs.module';
+import { ActivitiesModule } from './modules/activities/activities.module';
 import { JwtGuard } from './common/guards/jwt.guard';
 
 @Module({
@@ -18,6 +20,8 @@ import { JwtGuard } from './common/guards/jwt.guard';
     UsersModule,
     AuthModule,
     TimeTrackingModule,
+    DocsModule,
+    ActivitiesModule,
   ],
   providers: [
     {
