@@ -12,7 +12,7 @@ jobs:
         with:
           node-version: 24.15.0
       - run: npm ci
-      - run: npm run format
+      - run: npx prettier --check "src/**/*.ts" "test/**/*.ts"
   eslint:
     name: ESLint
     runs-on: ubuntu-latest
