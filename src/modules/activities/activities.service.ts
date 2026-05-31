@@ -73,10 +73,10 @@ export class ActivitiesService {
   async findAll(
     requesterId: string,
     requesterRank: number,
-    requesterSector: string,
+    requesterSectors: string[],
     filters: ActivityFilters,
   ): Promise<ActivityResponse[]> {
-    const params: unknown[] = [requesterRank, requesterId, requesterSector];
+    const params: unknown[] = [requesterRank, requesterId, requesterSectors];
     let dateClause = '';
 
     if (filters.date) {
@@ -107,7 +107,7 @@ export class ActivitiesService {
          AND (
            $1 >= 3
            OR a.user_id = $2
-           OR (u.sector = $3 AND ${ROLE_RANK_CASE} < $1)
+           OR (u.sector = ANY($3::text[]) AND ${ROLE_RANK_CASE} < $1)
          )
          ${dateClause}
          ${userClause}

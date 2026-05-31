@@ -68,7 +68,7 @@ describe('ActivitiesService', () => {
         rowCount: 1,
       });
 
-      const result = await service.findAll('user-uuid-1', 0, 'projetos', {});
+      const result = await service.findAll('user-uuid-1', 0, ['projetos'], {});
 
       expect(result).toHaveLength(1);
       expect(result[0].id).toBe('act-uuid-1');
@@ -77,7 +77,7 @@ describe('ActivitiesService', () => {
     it('should return empty array when no activities visible', async () => {
       (db.query as jest.Mock).mockResolvedValueOnce({ rows: [], rowCount: 0 });
 
-      const result = await service.findAll('user-uuid-1', 0, 'projetos', {});
+      const result = await service.findAll('user-uuid-1', 0, ['projetos'], {});
 
       expect(result).toHaveLength(0);
     });
@@ -85,7 +85,7 @@ describe('ActivitiesService', () => {
     it('should pass date filter when provided', async () => {
       (db.query as jest.Mock).mockResolvedValueOnce({ rows: [], rowCount: 0 });
 
-      await service.findAll('user-uuid-1', 1, 'projetos', {
+      await service.findAll('user-uuid-1', 1, ['projetos'], {
         date: '2026-05-29',
       });
 
@@ -97,7 +97,7 @@ describe('ActivitiesService', () => {
     it('should pass from/to filters when provided', async () => {
       (db.query as jest.Mock).mockResolvedValueOnce({ rows: [], rowCount: 0 });
 
-      await service.findAll('user-uuid-1', 1, 'projetos', {
+      await service.findAll('user-uuid-1', 1, ['projetos'], {
         from: '2026-05-01',
         to: '2026-05-31',
       });
@@ -111,7 +111,7 @@ describe('ActivitiesService', () => {
     it('date filter should override from/to', async () => {
       (db.query as jest.Mock).mockResolvedValueOnce({ rows: [], rowCount: 0 });
 
-      await service.findAll('user-uuid-1', 1, 'projetos', {
+      await service.findAll('user-uuid-1', 1, ['projetos'], {
         date: '2026-05-15',
         from: '2026-05-01',
         to: '2026-05-31',
@@ -126,7 +126,7 @@ describe('ActivitiesService', () => {
     it('should filter by userId when provided', async () => {
       (db.query as jest.Mock).mockResolvedValueOnce({ rows: [], rowCount: 0 });
 
-      await service.findAll('user-uuid-1', 1, 'projetos', {
+      await service.findAll('user-uuid-1', 1, ['projetos'], {
         userId: 'other-user-uuid',
       });
 
@@ -144,7 +144,7 @@ describe('ActivitiesService', () => {
         rowCount: 1,
       });
 
-      const result = await service.findAll('user-uuid-1', 0, 'projetos', {
+      const result = await service.findAll('user-uuid-1', 0, ['projetos'], {
         userId: 'user-uuid-1',
       });
 
