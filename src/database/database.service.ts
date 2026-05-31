@@ -1,6 +1,6 @@
 import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import { createClient } from '@supabase/supabase-js';
-import { Pool, QueryResult } from 'pg';
+import { Pool, PoolClient, QueryResult } from 'pg';
 import { EnvService } from '../config/env.service';
 
 @Injectable()
@@ -28,6 +28,21 @@ export class DatabaseService implements OnModuleDestroy {
     params?: unknown[],
   ): Promise<QueryResult<T>> {
     return this.pool.query<T>(sql, params);
+  }
+
+  async withTransaction<T>(fn: (client: PoolClient) => Promise<T>): Promise<T> {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      const result = await fn(client);
+      await client.query('COMMIT');
+      return result;
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
   }
 
   async onModuleDestroy(): Promise<void> {
