@@ -15,7 +15,7 @@ import {
 import { Request } from 'express';
 import { RoutePolicyGuard } from '../../common/guards/route-policy.guard';
 import { RoutePolicy } from '../../common/decorators/route-policy.decorator';
-import { getRank } from '../../common/guards/role-hierarchy';
+import { getRank, getVisibleSectors } from '../../common/guards/role-hierarchy';
 import type { JwtData } from '../../common/guards/jwt.guard';
 import type { UserResponse } from '../users/users.service';
 import { ActivitiesService } from './activities.service';
@@ -58,7 +58,7 @@ export class ActivitiesController {
     return this.activitiesService.findAll(
       req.jwtData.sub,
       rank,
-      req.user.sector,
+      getVisibleSectors(req.user.sector, req.user.role),
       { date, from, to, userId: req.jwtData.sub },
     );
   }
@@ -76,7 +76,7 @@ export class ActivitiesController {
     return this.activitiesService.findAll(
       req.jwtData.sub,
       rank,
-      req.user.sector,
+      getVisibleSectors(req.user.sector, req.user.role),
       { date, from, to, userId },
     );
   }

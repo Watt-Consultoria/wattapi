@@ -1,3 +1,27 @@
+### Requirement: Cargo Diretor de VEMKTU — visibilidade multi-setor
+O Diretor de VEMKTU é um cargo fixo que acumula a direção dos setores `comercial` e `marketing` simultaneamente. Qualquer usuário com `role = 'diretor'` e `sector` igual a `'comercial'` ou `'marketing'` SHALL enxergar subordinados (usuários de rank inferior) de ambos os setores, como se pertencessem a um único setor unificado.
+
+Esta regra é implementada via a função `getVisibleSectors(sector, role)` em `role-hierarchy.ts`, que retorna `['comercial', 'marketing']` quando o diretor pertence a um desses setores, e `[sector]` para qualquer outro caso. Todos os filtros de visibilidade hierárquica SHALL consumir esse helper em vez de comparar `sector` diretamente.
+
+**Módulos que implementam esse filtro e devem usar `getVisibleSectors`:**
+- `activities.service.ts` — cláusula `u.sector = ANY($n::text[])` em `findAll`
+- `routine.service.ts` — funções `buildSubordinatesFilter` e `canView` (aplicar quando o módulo de routine for mergeado)
+
+#### Scenario: Diretor de VEMKTU vê subordinados de ambos os setores
+- **GIVEN** um usuário com `role = 'diretor'` e `sector = 'comercial'` (ou `'marketing'`)
+- **WHEN** consulta qualquer endpoint de listagem com filtro hierárquico
+- **THEN** SHALL receber subordinados de `comercial` E de `marketing`
+
+#### Scenario: Diretor de outro setor não é afetado
+- **GIVEN** um usuário com `role = 'diretor'` e `sector = 'projetos'`
+- **WHEN** consulta qualquer endpoint de listagem com filtro hierárquico
+- **THEN** SHALL receber apenas subordinados de `projetos`, sem expansão
+
+#### Scenario: Roles abaixo de diretor não herdam a regra
+- **GIVEN** um usuário com `role = 'gerente'` e `sector = 'comercial'`
+- **WHEN** consulta qualquer endpoint de listagem com filtro hierárquico
+- **THEN** SHALL receber apenas subordinados de `comercial`, sem expansão para `marketing`
+
 ### Requirement: Definir hierarquia ordinal de roles
 O sistema SHALL mapear cada role a um valor numérico de rank que representa sua posição na hierarquia: `consultor=0`, `gerente=1`, `diretor=2`, `assessor=3`, `presidente=4`. Roles de rank >= 3 são considerados superusuários.
 

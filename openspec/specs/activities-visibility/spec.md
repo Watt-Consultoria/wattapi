@@ -24,6 +24,11 @@ Role ranks: consultor=0, gerente=1, diretor=2, assessor=3, presidente=4.
 - **WHEN** a diretor in sector "projetos" calls `GET /activities`
 - **THEN** activities from users in sector "comercial" are NOT included (except the diretor's own if any)
 
+#### Scenario: Diretor de VEMKTU sees subordinates from both comercial and marketing
+- **WHEN** a diretor with sector "comercial" (or "marketing") calls `GET /activities`
+- **THEN** activities from gerentes and consultores in BOTH "comercial" AND "marketing" are included
+- **NOTE** see `role-hierarchy` spec for the full Diretor de VEMKTU business rule
+
 #### Scenario: Consultor sees only own activities
 - **WHEN** a consultor calls `GET /activities`
 - **THEN** only their own activities are returned (no subordinates exist at rank < 0)
