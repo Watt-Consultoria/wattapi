@@ -50,7 +50,7 @@ afterEach(async () => {
   await fetch(BASE_URL, {
     method: 'PATCH',
     headers: jsonHeaders(superuser.id),
-    body: JSON.stringify({ min_week_hours: 40 }),
+    body: JSON.stringify({ min_week_hours: 40, min_availability_hours: 0 }),
   });
 });
 
@@ -66,8 +66,12 @@ describe('GET /settings', () => {
     const user = seededUsers[0];
     const res = await fetch(BASE_URL, { headers: authHeaders(user.id) });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { min_week_hours: number };
+    const body = (await res.json()) as {
+      min_week_hours: number;
+      min_availability_hours: number;
+    };
     expect(typeof body.min_week_hours).toBe('number');
+    expect(typeof body.min_availability_hours).toBe('number');
   });
 });
 
@@ -146,6 +150,28 @@ describe('PATCH /settings', () => {
       method: 'PATCH',
       headers: jsonHeaders(superuser.id),
       body: JSON.stringify({ min_week_hours: -1 }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('should update min_availability_hours and reflect immediately', async () => {
+    const superuser = seededUsers[3];
+    const res = await fetch(BASE_URL, {
+      method: 'PATCH',
+      headers: jsonHeaders(superuser.id),
+      body: JSON.stringify({ min_availability_hours: 10 }),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { min_availability_hours: number };
+    expect(body.min_availability_hours).toBe(10);
+  });
+
+  it('should return HTTP 400 for min_availability_hours above 98', async () => {
+    const superuser = seededUsers[3];
+    const res = await fetch(BASE_URL, {
+      method: 'PATCH',
+      headers: jsonHeaders(superuser.id),
+      body: JSON.stringify({ min_availability_hours: 99 }),
     });
     expect(res.status).toBe(400);
   });

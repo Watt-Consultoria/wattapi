@@ -2,7 +2,7 @@ import { Test } from '@nestjs/testing';
 import { SettingsService } from './settings.service';
 import { DatabaseService } from '../../database/database.service';
 
-const DEFAULT_SETTINGS = { min_week_hours: 40 };
+const DEFAULT_SETTINGS = { min_week_hours: 40, min_availability_hours: 0 };
 
 describe('SettingsService', () => {
   let service: SettingsService;
@@ -30,7 +30,10 @@ describe('SettingsService', () => {
 
   describe('getAll', () => {
     it('should return all settings from cache', () => {
-      expect(service.getAll()).toEqual({ min_week_hours: 40 });
+      expect(service.getAll()).toEqual({
+        min_week_hours: 40,
+        min_availability_hours: 0,
+      });
     });
 
     it('should return a copy, not the cache reference', () => {
@@ -57,7 +60,7 @@ describe('SettingsService', () => {
 
       const result = await service.update({ min_week_hours: 35 });
 
-      expect(result).toEqual({ min_week_hours: 35 });
+      expect(result).toEqual({ min_week_hours: 35, min_availability_hours: 0 });
       expect(db.query).toHaveBeenCalledTimes(2);
     });
 

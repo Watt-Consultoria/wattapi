@@ -2,17 +2,23 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import type { AppSettings, UpdateSettingsData } from './dto/settings.dto';
 
-const ALLOWED_COLUMNS = new Set<keyof AppSettings>(['min_week_hours']);
+const ALLOWED_COLUMNS = new Set<keyof AppSettings>([
+  'min_week_hours',
+  'min_availability_hours',
+]);
 
 @Injectable()
 export class SettingsService implements OnModuleInit {
-  private cache: AppSettings = { min_week_hours: 40 };
+  private cache: AppSettings = {
+    min_week_hours: 40,
+    min_availability_hours: 0,
+  };
 
   constructor(private readonly db: DatabaseService) {}
 
   async onModuleInit(): Promise<void> {
     const result = await this.db.query<AppSettings>(
-      'SELECT min_week_hours FROM app_settings WHERE id = TRUE',
+      'SELECT min_week_hours, min_availability_hours FROM app_settings WHERE id = TRUE',
     );
     this.cache = result.rows[0];
   }

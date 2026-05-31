@@ -184,7 +184,8 @@ Retorna as configurações globais da aplicação.
 
 ```json
 {
-  "min_week_hours": 40
+  "min_week_hours": 40,
+  "min_availability_hours": 0
 }
 ```
 
@@ -202,13 +203,15 @@ Atualiza as configurações globais da aplicação.
 
 ```json
 {
-  "min_week_hours": 44
+  "min_week_hours": 44,
+  "min_availability_hours": 10
 }
 ```
 
-| Campo            | Tipo             | Descrição                         |
-| ---------------- | ---------------- | --------------------------------- |
-| `min_week_hours` | inteiro positivo | Mínimo de horas semanais exigidas |
+| Campo                    | Tipo                   | Descrição                                                                                         |
+| ------------------------ | ---------------------- | ------------------------------------------------------------------------------------------------- |
+| `min_week_hours`         | inteiro positivo       | Mínimo de horas semanais exigidas no registro de horas                                            |
+| `min_availability_hours` | inteiro entre 0 e 98   | Mínimo de slots de disponibilidade que o usuário deve configurar em `PUT /routine`. `0` = desabilitado |
 
 **Resposta 200** — Configurações atualizadas
 
@@ -688,3 +691,126 @@ Health check da API. Não requer autenticação.
 
 **Resposta 500** — Erro interno no servidor
 
+
+---
+
+## Routine
+
+Gerencia a disponibilidade semanal de cada contribuinte. A rotina é composta por slots de 1 hora, de segunda a domingo, das 08h às 22h (14 slots × 7 dias = 98 slots por usuário).
+
+### `PUT /routine`
+
+Salva ou substitui a rotina semanal do próprio usuário. A operação é um upsert atômico — todos os slots anteriores são apagados e substituídos pelos novos.
+
+**Acesso:** autenticado
+
+**Body**
+
+```json
+{
+  "slots": {
+    "mon": [true, false, true, false, false, false, false, false, false, false, false, false, false, false],
+    "tue": [...],
+    "wed": [...],
+    "thu": [...],
+    "fri": [...],
+    "sat": [...],
+    "sun": [...]
+  }
+}
+```
+
+Cada array possui exatamente 14 booleanos: índice 0 = slot 08h–09h, índice 13 = slot 21h–22h.
+
+**Resposta 200** — sem corpo
+
+**Resposta 400** — payload inválido (dia faltando ou array com tamanho diferente de 14), ou total de slots disponíveis abaixo de `min_availability_hours`
+
+> Quando a validação de `min_availability_hours` falha, a mensagem descreve a situação: `"Disponibilidade insuficiente: você configurou Xh de disponibilidade, mas o mínimo exigido é Yh. Adicione mais Zh de disponibilidade."`
+
+**Resposta 401** — não autenticado
+
+---
+
+### `GET /routine`
+
+Retorna a rotina semanal do próprio usuário autenticado.
+
+**Acesso:** autenticado
+
+**Resposta 200**
+
+```json
+{ "slots": { "mon": [bool×14], "tue": [...], "wed": [...], "thu": [...], "fri": [...], "sat": [...], "sun": [...] } }
+```
+
+Retorna `{ "slots": null }` se o usuário nunca configurou sua rotina.
+
+---
+
+### `GET /routine/summary`
+
+Retorna dois dados complementares sobre os subordinados do caller: a disponibilidade agregada por slot e a lista de subordinados que ainda não configuraram sua rotina.
+
+**Acesso:** autenticado, rank ≥ 1 (gerente ou superior)
+
+| Caller     | Subordinados visíveis               | Restrição de setor |
+|------------|-------------------------------------|--------------------|
+| Gerente    | consultor                           | mesmo setor        |
+| Diretor    | gerente, consultor                  | mesmo setor        |
+| Assessor   | diretor, gerente, consultor         | nenhuma            |
+| Presidente | diretor, gerente, consultor         | nenhuma            |
+
+**Resposta 200**
+
+```json
+{
+  "availability": {
+    "mon": {
+      "8":  [{ "id": "uuid", "name": "Ana", "role": "consultor", "sector": "projetos" }],
+      "14": [{ "id": "uuid", "name": "Ana", "role": "consultor", "sector": "projetos" }]
+    },
+    "wed": { ... }
+  },
+  "unconfigured": [
+    { "id": "uuid", "name": "Carlos", "role": "gerente", "sector": "projetos" }
+  ]
+}
+```
+
+- **`availability`** — objeto aninhado por dia (`mon`–`sun`) e hora (`"8"`–`"21"`). Dias e horas sem nenhum subordinado disponível são omitidos. Subordinados sem rotina configurada não aparecem aqui.
+- **`unconfigured`** — lista de subordinados que nunca configuraram sua rotina, ordenados por nome. Cada entrada contém `id`, `name`, `role` e `sector`.
+
+As chaves de hora são strings com o número da hora de início (ex: `"8"` = slot 08h–09h, `"21"` = slot 21h–22h).
+
+Retorna `{ "availability": {}, "unconfigured": [] }` quando o caller não possui subordinados visíveis.
+
+**Resposta 401** — não autenticado
+
+**Resposta 403** — caller é consultor (rank < 1)
+
+---
+
+### `GET /routine/:userId`
+
+Retorna a rotina semanal de outro usuário, sujeito a visibilidade hierárquica.
+
+**Acesso:** autenticado; a visibilidade é verificada no serviço:
+
+- `viewer.id === userId` → autorizado
+- `rank(viewer) > rank(target)` e `rank(viewer) ≥ 3` → autorizado (qualquer setor)
+- `rank(viewer) > rank(target)` e `viewer.sector === target.sector` → autorizado
+
+**Resposta 200**
+
+```json
+{ "slots": { "mon": [bool×14], ... } }
+```
+
+Retorna `{ "slots": null }` se o target nunca configurou sua rotina.
+
+**Resposta 401** — não autenticado
+
+**Resposta 403** — caller não tem permissão de visualizar a rotina do target
+
+**Resposta 404** — userId não encontrado
