@@ -40,7 +40,7 @@ beforeAll(async () => {
 });
 
 afterEach(async () => {
-  await orchestrator.clearTimeEntries();
+  await orchestrator.clearTransactionalData();
 });
 
 afterAll(async () => {

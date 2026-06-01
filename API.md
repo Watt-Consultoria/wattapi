@@ -814,3 +814,138 @@ Retorna `{ "slots": null }` se o target nunca configurou sua rotina.
 **Resposta 403** — caller não tem permissão de visualizar a rotina do target
 
 **Resposta 404** — userId não encontrado
+
+
+---
+
+## Reimbursements
+
+### `POST /reimbursements`
+
+Cria uma nova solicitação de reembolso. O frontend deve fazer upload dos comprovantes diretamente ao bucket privado `reimbursement-receipts` antes de chamar esta rota, e enviar os storage paths no body.
+
+**Acesso:** autenticado (qualquer usuário)
+
+**Body**
+
+```json
+{
+  "title": "Ingresso DevConf 2026",
+  "description": "Participação em conferência de desenvolvimento",
+  "amount_cents": 15000,
+  "category": "ingresso",
+  "pix_key": "joao@empresa.com",
+  "attachments": [
+    { "path": "receipts/user-uuid/some-uuid/nota.pdf", "name": "nota.pdf" }
+  ]
+}
+```
+
+| Campo | Tipo | Obrigatório | Descrição |
+| --- | --- | --- | --- |
+| `title` | string | sim | Mínimo 1 caractere |
+| `description` | string | sim | Mínimo 1 caractere |
+| `amount_cents` | integer | sim | Valor em centavos, deve ser positivo |
+| `category` | enum | sim | `ingresso`, `alimentação`, `transporte`, `equipamento`, `outro` |
+| `pix_key` | string | sim | Chave PIX para recebimento |
+| `attachments` | array | **sim** | Array de `{ path, name }` com **mínimo 1 item**; cada `path` deve existir no bucket `reimbursement-receipts` |
+
+**Resposta 201** — Reembolso criado
+
+```json
+{
+  "id": "uuid",
+  "user_id": "uuid",
+  "title": "Ingresso DevConf 2026",
+  "description": "Participação em conferência de desenvolvimento",
+  "amount_cents": 15000,
+  "category": "ingresso",
+  "pix_key": "joao@empresa.com",
+  "status": "pending",
+  "attachments": [
+    { "id": "uuid", "name": "nota.pdf", "signed_url": "https://..." }
+  ],
+  "created_at": "2026-05-31T16:00:00.000Z",
+  "updated_at": "2026-05-31T16:00:00.000Z"
+}
+```
+
+**Resposta 400** — Campos inválidos, categoria inválida, `amount_cents` ≤ 0, `attachments` vazio/ausente, ou path de comprovante não encontrado no storage
+
+**Resposta 401** — Token ausente, inválido ou expirado
+
+---
+
+### `GET /reimbursements`
+
+Lista solicitações de reembolso. Usuários comuns veem apenas as próprias; superusuários (rank ≥ 3) podem ver todas usando `?target=all`.
+
+**Acesso:** autenticado
+
+**Query params**
+
+| Parâmetro | Tipo | Default | Descrição |
+| --- | --- | --- | --- |
+| `target` | `me` \| `all` | `me` | `me` retorna só os do caller; `all` requer rank ≥ 3 |
+
+**Resposta 200** — Array de reembolsos (mesmo shape do POST 201)
+
+> Cada attachment inclui `signed_url` com validade de 1 hora; o `path` de storage não é exposto.
+
+**Resposta 401** — Token ausente, inválido ou expirado
+
+**Resposta 403** — `target=all` por usuário com rank < 3
+
+---
+
+### `GET /reimbursements/:user_id`
+
+Retorna todas as solicitações de reembolso de um usuário específico. Exclusivo para superusuários.
+
+**Acesso:** autenticado; lógica de acesso verificada no serviço: lança 403 se rank < 3
+
+**Parâmetros de path**
+
+| Parâmetro | Tipo | Descrição |
+| --- | --- | --- |
+| `user_id` | UUID | ID do usuário alvo |
+
+**Resposta 200** — Array de reembolsos (mesmo shape do POST 201); retorna `[]` se o usuário não tiver reembolsos
+
+**Resposta 401** — Token ausente, inválido ou expirado
+
+**Resposta 403** — Caller com rank < 3
+
+---
+
+### `PATCH /reimbursements/:id/status`
+
+Aprova ou rejeita uma solicitação de reembolso pendente. Status é one-way: uma vez resolvido (`approved` ou `rejected`), não pode ser alterado.
+
+**Acesso:** autenticado; somente Presidente Executivo (rank 4)
+
+**Parâmetros de path**
+
+| Parâmetro | Tipo | Descrição |
+| --- | --- | --- |
+| `id` | UUID | ID do reembolso |
+
+**Body**
+
+```json
+{ "status": "approved" }
+```
+
+| Campo | Tipo | Valores |
+| --- | --- | --- |
+| `status` | enum | `approved`, `rejected` (`pending` não é permitido) |
+
+**Resposta 200** — Reembolso atualizado (mesmo shape do POST 201)
+
+**Resposta 400** — `status` inválido, ou reembolso já está `approved`/`rejected`
+
+**Resposta 401** — Token ausente, inválido ou expirado
+
+**Resposta 403** — Caller com rank < 4
+
+**Resposta 404** — Reembolso não encontrado
