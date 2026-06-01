@@ -12,7 +12,7 @@ export class DatabaseService implements OnModuleDestroy {
     try {
       this.client = createClient(
         this.env.get('SUPABASE_URL'),
-        this.env.get('SUPABASE_PUBLIC_KEY'),
+        this.env.get('SUPABASE_SERVICE_ROLE_KEY'),
       );
     } catch (error) {
       throw new Error(

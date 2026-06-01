@@ -10,6 +10,7 @@ export const envSchema = z.object({
   SUPABASE_URL: z.string().min(1),
   SUPABASE_ANON_KEY: z.string().min(1),
   SUPABASE_PUBLIC_KEY: z.string().min(1),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
 });
 
 export type Env = z.infer<typeof envSchema>;

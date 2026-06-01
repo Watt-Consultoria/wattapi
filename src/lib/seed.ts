@@ -98,6 +98,7 @@ const ALL_TEST_IDS = [
 export async function seedUsers(pool: Pool): Promise<SeedUser[]> {
   await pool.query('DELETE FROM notifications');
   await pool.query('DELETE FROM activities');
+  await pool.query('DELETE FROM reimbursements');
   await pool.query('DELETE FROM users');
   await pool.query(`DELETE FROM auth.users WHERE id = ANY($1::uuid[])`, [
     ALL_TEST_IDS,
@@ -136,6 +137,7 @@ export async function clearUsers(pool: Pool): Promise<void> {
   await pool.query('DELETE FROM activities');
   await pool.query('DELETE FROM time_entries');
   await pool.query('DELETE FROM routine_slots');
+  await pool.query('DELETE FROM reimbursements');
   await pool.query('DELETE FROM users');
   await pool.query(`DELETE FROM auth.users WHERE id = ANY($1::uuid[])`, [
     ALL_TEST_IDS,

@@ -12,6 +12,7 @@ import { DocsModule } from './modules/docs/docs.module';
 import { ActivitiesModule } from './modules/activities/activities.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { RoutineModule } from './modules/routine/routine.module';
+import { ReimbursementsModule } from './modules/reimbursements/reimbursements.module';
 import { JwtGuard } from './common/guards/jwt.guard';
 
 @Module({
@@ -27,6 +28,7 @@ import { JwtGuard } from './common/guards/jwt.guard';
     ActivitiesModule,
     NotificationsModule,
     RoutineModule,
+    ReimbursementsModule,
   ],
   providers: [
     {
