@@ -2,8 +2,37 @@ import { z } from 'zod';
 
 const LEAD_STATUSES = ['nao_contatado', 'em_progresso', 'contatado'] as const;
 
+export function isValidCnpj(cnpj: string): boolean {
+  if (!/^\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}$/.test(cnpj)) return false;
+
+  const digits = cnpj.replace(/\D/g, '');
+
+  if (/^(\d)\1+$/.test(digits)) return false;
+
+  const calcDigit = (slice: string, weights: number[]): number => {
+    const sum = slice
+      .split('')
+      .reduce((acc, d, i) => acc + Number(d) * weights[i], 0);
+    const remainder = sum % 11;
+    return remainder < 2 ? 0 : 11 - remainder;
+  };
+
+  const firstDigit = calcDigit(
+    digits.slice(0, 12),
+    [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2],
+  );
+  if (firstDigit !== Number(digits[12])) return false;
+
+  const secondDigit = calcDigit(
+    digits.slice(0, 13),
+    [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2],
+  );
+  return secondDigit === Number(digits[13]);
+}
+
 export const createLeadSchema = z.object({
   company_name: z.string().min(1),
+  cnpj: z.string().refine(isValidCnpj, 'CNPJ inválido'),
   address_logradouro: z.string().min(1),
   address_numero: z.string().min(1),
   address_complemento: z.string().optional(),
@@ -18,6 +47,7 @@ export const createLeadSchema = z.object({
 export const updateLeadSchema = z
   .object({
     company_name: z.string().min(1).optional(),
+    cnpj: z.string().refine(isValidCnpj, 'CNPJ inválido').optional(),
     address_logradouro: z.string().min(1).optional(),
     address_numero: z.string().min(1).optional(),
     address_complemento: z.string().optional(),
@@ -72,6 +102,7 @@ export type UpdateCommentDto = z.infer<typeof updateCommentSchema>;
 export interface LeadRow {
   id: string;
   company_name: string;
+  cnpj: string;
   created_by: string;
   status: string;
   address_logradouro: string;
@@ -107,6 +138,7 @@ export interface CommentRow {
 export interface LeadResponse {
   id: string;
   company_name: string;
+  cnpj: string;
   created_by: string;
   status: string;
   address_logradouro: string;

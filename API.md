@@ -1068,6 +1068,7 @@ Lista todos os leads com detalhes completos, incluindo `contacts` e `comments` d
   {
     "id": "uuid",
     "company_name": "Empresa ABC",
+    "cnpj": "12.345.678/0001-95",
     "created_by": "uuid-do-usuario",
     "status": "nao_contatado",
     "address_logradouro": "Rua das Flores",
@@ -1105,6 +1106,7 @@ Cria um novo lead. O campo `created_by` é preenchido automaticamente com o call
 ```json
 {
   "company_name": "Empresa ABC",
+  "cnpj": "12.345.678/0001-95",
   "address_logradouro": "Rua das Flores",
   "address_numero": "42",
   "address_bairro": "Jardim Paulista",
@@ -1119,6 +1121,7 @@ Cria um novo lead. O campo `created_by` é preenchido automaticamente com o call
 | Campo | Tipo | Obrigatório |
 | --- | --- | --- |
 | `company_name` | string | sim |
+| `cnpj` | string | sim — formato `XX.XXX.XXX/XXXX-XX` com dígitos verificadores válidos (algoritmo Receita Federal) |
 | `address_logradouro` | string | sim |
 | `address_numero` | string | sim |
 | `address_complemento` | string | não |
@@ -1131,7 +1134,7 @@ Cria um novo lead. O campo `created_by` é preenchido automaticamente com o call
 
 **Resposta 201** — Lead criado (mesmo shape do GET /leads/:id, sem `contacts` e `comments`)
 
-**Resposta 400** — Campo obrigatório ausente, ou `interest_items` com nome não encontrado no portfólio
+**Resposta 400** — Campo obrigatório ausente, `cnpj` inválido (formato ou dígitos verificadores), ou `interest_items` com nome não encontrado no portfólio
 
 **Resposta 401** — Token ausente
 
@@ -1141,7 +1144,7 @@ Cria um novo lead. O campo `created_by` é preenchido automaticamente com o call
 
 ### GET /leads/:id
 
-Retorna um lead com detalhes completos: `contacts`, `interest_items` e `comments` (ordenados por `created_at` ASC).
+Retorna um lead com detalhes completos: `contacts`, `interest_items`, `cnpj` e `comments` (ordenados por `created_at` ASC).
 
 **Resposta 200**
 
@@ -1149,6 +1152,7 @@ Retorna um lead com detalhes completos: `contacts`, `interest_items` e `comments
 {
   "id": "uuid",
   "company_name": "Empresa ABC",
+  "cnpj": "12.345.678/0001-95",
   "created_by": "uuid",
   "status": "nao_contatado",
   "address_logradouro": "Rua das Flores",
@@ -1180,13 +1184,20 @@ Retorna um lead com detalhes completos: `contacts`, `interest_items` e `comments
 
 ### PATCH /leads/:id
 
-Atualiza parcialmente um lead. `interest_items`, se fornecido, substitui o array completo.
+Atualiza parcialmente um lead. `interest_items`, se fornecido, substitui o array completo. `cnpj`, se fornecido, deve estar no formato `XX.XXX.XXX/XXXX-XX` com dígitos verificadores válidos.
 
 **Body** — qualquer subconjunto dos campos do lead (exceto `created_by` e `created_at`)
 
+```json
+{
+  "cnpj": "98.765.432/0001-98",
+  "status": "em_progresso"
+}
+```
+
 **Resposta 200** — Lead atualizado (shape do GET /leads/:id, sem `contacts` e `comments`)
 
-**Resposta 400** — `status` inválido, ou `interest_items` com nome não encontrado no portfólio
+**Resposta 400** — `status` inválido, `cnpj` inválido (formato ou dígitos verificadores), ou `interest_items` com nome não encontrado no portfólio
 
 **Resposta 401** — Token ausente
 

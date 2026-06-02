@@ -5,6 +5,7 @@ const BASE_URL = 'http://localhost:3001/leads';
 type LeadBody = {
   id: string;
   company_name: string;
+  cnpj: string;
   status: string;
   created_by: string;
   interest_items: string[];
@@ -12,6 +13,7 @@ type LeadBody = {
 
 const validPayload = {
   company_name: 'Empresa Teste',
+  cnpj: '12.345.678/0001-95',
   address_logradouro: 'Rua das Flores',
   address_numero: '42',
   address_bairro: 'Jardim Paulista',
@@ -105,6 +107,90 @@ describe('POST /leads', () => {
           ...validPayload,
           interest_items: ['Serviço Inexistente'],
         }),
+      });
+      expect(response.status).toBe(400);
+    });
+
+    test('Creating a lead with valid cnpj includes it in response', async () => {
+      const user = await orchestrator.database.seed.createUser({
+        username: 'Consultor Leads Post Cnpj',
+        email: `leads.post.consultor.cnpj.${Date.now()}@watt-test.com`,
+        password: '',
+        role: 'consultor',
+        sector: 'comercial',
+      });
+
+      const response = await fetch(BASE_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: JSON.stringify(validPayload),
+      });
+      const body = (await response.json()) as LeadBody;
+
+      expect(response.status).toBe(201);
+      expect(body.cnpj).toBe('12.345.678/0001-95');
+    });
+
+    test('Attempting to create a lead without cnpj returns 400', async () => {
+      const user = await orchestrator.database.seed.createUser({
+        username: 'Consultor Leads Post No Cnpj',
+        email: `leads.post.consultor.nocnpj.${Date.now()}@watt-test.com`,
+        password: '',
+        role: 'consultor',
+        sector: 'comercial',
+      });
+      const { cnpj: _omit, ...payloadWithoutCnpj } = validPayload;
+
+      const response = await fetch(BASE_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: JSON.stringify(payloadWithoutCnpj),
+      });
+      expect(response.status).toBe(400);
+    });
+
+    test('Attempting to create a lead with unformatted cnpj returns 400', async () => {
+      const user = await orchestrator.database.seed.createUser({
+        username: 'Consultor Leads Post Bad Cnpj Format',
+        email: `leads.post.consultor.badcnpjfmt.${Date.now()}@watt-test.com`,
+        password: '',
+        role: 'consultor',
+        sector: 'comercial',
+      });
+
+      const response = await fetch(BASE_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: JSON.stringify({ ...validPayload, cnpj: '12345678000195' }),
+      });
+      expect(response.status).toBe(400);
+    });
+
+    test('Attempting to create a lead with cnpj with invalid check digits returns 400', async () => {
+      const user = await orchestrator.database.seed.createUser({
+        username: 'Consultor Leads Post Invalid Cnpj Digits',
+        email: `leads.post.consultor.invalidcnpjdigits.${Date.now()}@watt-test.com`,
+        password: '',
+        role: 'consultor',
+        sector: 'comercial',
+      });
+
+      const response = await fetch(BASE_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: JSON.stringify({ ...validPayload, cnpj: '11.111.111/1111-11' }),
       });
       expect(response.status).toBe(400);
     });
