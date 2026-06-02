@@ -949,3 +949,392 @@ Aprova ou rejeita uma solicitação de reembolso pendente. Status é one-way: um
 **Resposta 403** — Caller com rank < 4
 
 **Resposta 404** — Reembolso não encontrado
+
+---
+
+## Portfolio — Itens de Serviços da Empresa
+
+### GET /portfolio
+
+Lista todos os itens do portfólio, ordenados por `name`.
+
+**Acesso:** autenticado (qualquer role)
+
+**Resposta 200**
+
+```json
+[
+  {
+    "id": "uuid",
+    "name": "Consultoria Energética",
+    "description": "Análise de consumo energético",
+    "created_at": "2026-06-02T00:00:00.000Z",
+    "updated_at": "2026-06-02T00:00:00.000Z"
+  }
+]
+```
+
+**Resposta 401** — Token ausente, inválido ou expirado
+
+---
+
+### POST /portfolio
+
+Cria um novo item de portfólio.
+
+**Acesso:** `minRank 2` (diretor, assessor, presidente)
+
+**Body**
+
+```json
+{ "name": "Auditoria Elétrica", "description": "Verificação de instalações" }
+```
+
+| Campo | Tipo | Obrigatório |
+| --- | --- | --- |
+| `name` | string | sim — deve ser único |
+| `description` | string | não |
+
+**Resposta 201** — Item criado (mesmo shape do GET)
+
+**Resposta 400** — `name` ausente
+
+**Resposta 401** — Token ausente
+
+**Resposta 403** — Rank insuficiente (< 2)
+
+**Resposta 409** — `name` já existente
+
+---
+
+### PATCH /portfolio/:id
+
+Atualiza parcialmente um item de portfólio.
+
+**Acesso:** `minRank 2` (diretor, assessor, presidente)
+
+**Body** — ao menos um campo obrigatório
+
+```json
+{ "description": "Nova descrição" }
+```
+
+**Resposta 200** — Item atualizado (mesmo shape do GET)
+
+**Resposta 400** — Body vazio `{}`
+
+**Resposta 401** — Token ausente
+
+**Resposta 403** — Rank insuficiente
+
+**Resposta 404** — Item não encontrado
+
+---
+
+### DELETE /portfolio/:id
+
+Remove permanentemente um item de portfólio.
+
+**Acesso:** `minRank 2` (diretor, assessor, presidente)
+
+**Resposta 204** — Removido com sucesso
+
+**Resposta 401** — Token ausente
+
+**Resposta 403** — Rank insuficiente
+
+**Resposta 404** — Item não encontrado
+
+---
+
+## Leads — CRM de Prospects
+
+**Acesso para todas as rotas de leads:**
+
+```
+rba: [['minRank', 3], ['sector', 'comercial'], ['roleAndSector', { roles: ['diretor'], sectors: ['marketing'] }]]
+```
+
+Ou seja: assessor/presidente (qualquer setor), qualquer role no setor `comercial`, ou diretor do setor `marketing`.
+
+### GET /leads
+
+Lista todos os leads com detalhes completos, incluindo `contacts` e `comments` de cada lead.
+
+**Resposta 200**
+
+```json
+[
+  {
+    "id": "uuid",
+    "company_name": "Empresa ABC",
+    "created_by": "uuid-do-usuario",
+    "status": "nao_contatado",
+    "address_logradouro": "Rua das Flores",
+    "address_numero": "42",
+    "address_complemento": null,
+    "address_bairro": "Jardim Paulista",
+    "address_cidade": "São Paulo",
+    "address_estado": "SP",
+    "address_cep": "01310100",
+    "interest_items": ["Consultoria Energética"],
+    "contacts": [
+      { "id": "uuid", "lead_id": "uuid", "name": "João", "role": "Diretor", "email": "joao@abc.com", "phone": null }
+    ],
+    "comments": [
+      { "id": "uuid", "lead_id": "uuid", "user_id": "uuid", "content": "Comentário.", "created_at": "...", "updated_at": "..." }
+    ],
+    "created_at": "2026-06-02T00:00:00.000Z",
+    "updated_at": "2026-06-02T00:00:00.000Z"
+  }
+]
+```
+
+**Resposta 401** — Token ausente
+
+**Resposta 403** — Acesso não autorizado pela política de leads
+
+---
+
+### POST /leads
+
+Cria um novo lead. O campo `created_by` é preenchido automaticamente com o caller.
+
+**Body**
+
+```json
+{
+  "company_name": "Empresa ABC",
+  "address_logradouro": "Rua das Flores",
+  "address_numero": "42",
+  "address_bairro": "Jardim Paulista",
+  "address_cidade": "São Paulo",
+  "address_estado": "SP",
+  "address_cep": "01310100",
+  "status": "nao_contatado",
+  "interest_items": ["Consultoria Energética"]
+}
+```
+
+| Campo | Tipo | Obrigatório |
+| --- | --- | --- |
+| `company_name` | string | sim |
+| `address_logradouro` | string | sim |
+| `address_numero` | string | sim |
+| `address_complemento` | string | não |
+| `address_bairro` | string | sim |
+| `address_cidade` | string | sim |
+| `address_estado` | string | sim |
+| `address_cep` | string | sim |
+| `status` | enum | não — padrão `nao_contatado` |
+| `interest_items` | string[] | não — validado contra `portfolio_items` ativos |
+
+**Resposta 201** — Lead criado (mesmo shape do GET /leads/:id, sem `contacts` e `comments`)
+
+**Resposta 400** — Campo obrigatório ausente, ou `interest_items` com nome não encontrado no portfólio
+
+**Resposta 401** — Token ausente
+
+**Resposta 403** — Acesso não autorizado pela política de leads
+
+---
+
+### GET /leads/:id
+
+Retorna um lead com detalhes completos: `contacts`, `interest_items` e `comments` (ordenados por `created_at` ASC).
+
+**Resposta 200**
+
+```json
+{
+  "id": "uuid",
+  "company_name": "Empresa ABC",
+  "created_by": "uuid",
+  "status": "nao_contatado",
+  "address_logradouro": "Rua das Flores",
+  "address_numero": "42",
+  "address_complemento": null,
+  "address_bairro": "Jardim Paulista",
+  "address_cidade": "São Paulo",
+  "address_estado": "SP",
+  "address_cep": "01310100",
+  "interest_items": ["Consultoria Energética"],
+  "contacts": [
+    { "id": "uuid", "lead_id": "uuid", "name": "João", "role": "Diretor", "email": "joao@abc.com", "phone": null }
+  ],
+  "comments": [
+    { "id": "uuid", "lead_id": "uuid", "user_id": "uuid", "content": "Comentário.", "created_at": "...", "updated_at": "..." }
+  ],
+  "created_at": "2026-06-02T00:00:00.000Z",
+  "updated_at": "2026-06-02T00:00:00.000Z"
+}
+```
+
+**Resposta 401** — Token ausente
+
+**Resposta 403** — Acesso não autorizado
+
+**Resposta 404** — Lead não encontrado
+
+---
+
+### PATCH /leads/:id
+
+Atualiza parcialmente um lead. `interest_items`, se fornecido, substitui o array completo.
+
+**Body** — qualquer subconjunto dos campos do lead (exceto `created_by` e `created_at`)
+
+**Resposta 200** — Lead atualizado (shape do GET /leads/:id, sem `contacts` e `comments`)
+
+**Resposta 400** — `status` inválido, ou `interest_items` com nome não encontrado no portfólio
+
+**Resposta 401** — Token ausente
+
+**Resposta 403** — Acesso não autorizado
+
+**Resposta 404** — Lead não encontrado
+
+---
+
+### DELETE /leads/:id
+
+Remove permanentemente um lead (cascata em contatos e comentários).
+
+**Acesso extra (verificado no service):** somente o criador ou superuser (rank >= 3)
+
+**Resposta 204** — Removido com sucesso
+
+**Resposta 401** — Token ausente
+
+**Resposta 403** — Não é o criador e não é superuser
+
+**Resposta 404** — Lead não encontrado
+
+---
+
+## Leads — Contatos
+
+### POST /leads/:id/contacts
+
+Adiciona um contato ao lead. Ao menos `email` ou `phone` deve ser informado.
+
+**Body**
+
+```json
+{ "name": "João Silva", "role": "Diretor", "email": "joao@empresa.com", "phone": "11999999999" }
+```
+
+| Campo | Tipo | Obrigatório |
+| --- | --- | --- |
+| `name` | string | sim |
+| `role` | string | sim |
+| `email` | string | não — mas email ou phone é obrigatório |
+| `phone` | string | não — mas email ou phone é obrigatório |
+
+**Resposta 201**
+
+```json
+{ "id": "uuid", "lead_id": "uuid", "name": "João Silva", "role": "Diretor", "email": "joao@empresa.com", "phone": null }
+```
+
+**Resposta 400** — Nem `email` nem `phone` fornecidos
+
+**Resposta 401** — Token ausente
+
+**Resposta 403** — Acesso não autorizado
+
+**Resposta 404** — Lead não encontrado
+
+---
+
+### PATCH /leads/:id/contacts/:contact_id
+
+Atualiza parcialmente um contato. Mantém a constraint email OR phone após o update.
+
+**Body** — qualquer subconjunto de `name`, `role`, `email`, `phone`
+
+**Resposta 200** — Contato atualizado
+
+**Resposta 400** — Update resultaria em ausência de email e phone
+
+**Resposta 401** — Token ausente
+
+**Resposta 403** — Acesso não autorizado
+
+**Resposta 404** — Contato não encontrado ou não pertence ao lead
+
+---
+
+### DELETE /leads/:id/contacts/:contact_id
+
+Remove um contato do lead.
+
+**Resposta 204** — Removido com sucesso
+
+**Resposta 401** — Token ausente
+
+**Resposta 403** — Acesso não autorizado
+
+**Resposta 404** — Contato não encontrado
+
+---
+
+## Leads — Comentários
+
+### POST /leads/:id/comments
+
+Adiciona um comentário ao lead. `user_id` é preenchido automaticamente com o caller.
+
+**Body**
+
+```json
+{ "content": "Cliente demonstrou interesse em auditoria." }
+```
+
+**Resposta 201**
+
+```json
+{ "id": "uuid", "lead_id": "uuid", "user_id": "uuid", "content": "...", "created_at": "...", "updated_at": "..." }
+```
+
+**Resposta 400** — `content` vazio ou ausente
+
+**Resposta 401** — Token ausente
+
+**Resposta 403** — Acesso não autorizado
+
+**Resposta 404** — Lead não encontrado
+
+---
+
+### PATCH /leads/:id/comments/:comment_id
+
+Edita o conteúdo de um comentário. Somente o criador pode editar.
+
+**Body**
+
+```json
+{ "content": "Texto corrigido." }
+```
+
+**Resposta 200** — Comentário atualizado com `updated_at` preenchido
+
+**Resposta 401** — Token ausente
+
+**Resposta 403** — Caller não é o criador do comentário
+
+**Resposta 404** — Comentário não encontrado
+
+---
+
+### DELETE /leads/:id/comments/:comment_id
+
+Remove um comentário. Permitido para o criador ou para quem tem rank **estritamente maior** que o do criador.
+
+**Resposta 204** — Removido com sucesso
+
+**Resposta 401** — Token ausente
+
+**Resposta 403** — Caller não é o criador nem tem rank superior
+
+**Resposta 404** — Comentário não encontrado

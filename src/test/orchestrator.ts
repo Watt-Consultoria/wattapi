@@ -62,6 +62,10 @@ async function clearDatabase(): Promise<void> {
   await p.query('DELETE FROM time_entries');
   await p.query('DELETE FROM routine_slots');
   await p.query('DELETE FROM reimbursements');
+  await p.query('DELETE FROM lead_comments');
+  await p.query('DELETE FROM lead_contacts');
+  await p.query('DELETE FROM leads');
+  await p.query('DELETE FROM portfolio_items');
   await p.query('DELETE FROM users');
   await p.query('DELETE FROM auth.users');
 }
@@ -288,6 +292,151 @@ async function createReimbursement({
   return rows[0];
 }
 
+export interface CreatedPortfolioItem {
+  id: string;
+  name: string;
+  description: string | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+async function createPortfolioItem({
+  name = 'Serviço Teste',
+  description = null,
+}: {
+  name?: string;
+  description?: string | null;
+} = {}): Promise<CreatedPortfolioItem> {
+  const { rows } = await getPool().query<CreatedPortfolioItem>(
+    `INSERT INTO portfolio_items (name, description)
+     VALUES ($1, $2)
+     RETURNING id, name, description, created_at, updated_at`,
+    [name, description],
+  );
+  return rows[0];
+}
+
+export interface CreatedLead {
+  id: string;
+  company_name: string;
+  created_by: string;
+  status: string;
+  address_logradouro: string;
+  address_numero: string;
+  address_complemento: string | null;
+  address_bairro: string;
+  address_cidade: string;
+  address_estado: string;
+  address_cep: string;
+  interest_items: string[];
+  created_at: Date;
+  updated_at: Date;
+}
+
+async function createLead({
+  company_name = 'Empresa Teste',
+  created_by,
+  status = 'nao_contatado',
+  address_logradouro = 'Rua Teste',
+  address_numero = '100',
+  address_complemento = null,
+  address_bairro = 'Centro',
+  address_cidade = 'São Paulo',
+  address_estado = 'SP',
+  address_cep = '01310100',
+  interest_items = [],
+}: {
+  company_name?: string;
+  created_by: string;
+  status?: string;
+  address_logradouro?: string;
+  address_numero?: string;
+  address_complemento?: string | null;
+  address_bairro?: string;
+  address_cidade?: string;
+  address_estado?: string;
+  address_cep?: string;
+  interest_items?: string[];
+}): Promise<CreatedLead> {
+  const { rows } = await getPool().query<CreatedLead>(
+    `INSERT INTO leads (company_name, created_by, status, address_logradouro, address_numero, address_complemento, address_bairro, address_cidade, address_estado, address_cep, interest_items)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+     RETURNING *`,
+    [
+      company_name,
+      created_by,
+      status,
+      address_logradouro,
+      address_numero,
+      address_complemento,
+      address_bairro,
+      address_cidade,
+      address_estado,
+      address_cep,
+      interest_items,
+    ],
+  );
+  return rows[0];
+}
+
+export interface CreatedLeadContact {
+  id: string;
+  lead_id: string;
+  name: string;
+  role: string;
+  email: string | null;
+  phone: string | null;
+}
+
+async function createLeadContact({
+  lead_id,
+  name = 'Contato Teste',
+  role = 'Responsável',
+  email = null,
+  phone = '11999999999',
+}: {
+  lead_id: string;
+  name?: string;
+  role?: string;
+  email?: string | null;
+  phone?: string | null;
+}): Promise<CreatedLeadContact> {
+  const { rows } = await getPool().query<CreatedLeadContact>(
+    `INSERT INTO lead_contacts (lead_id, name, role, email, phone)
+     VALUES ($1, $2, $3, $4, $5)
+     RETURNING id, lead_id, name, role, email, phone`,
+    [lead_id, name, role, email, phone],
+  );
+  return rows[0];
+}
+
+export interface CreatedLeadComment {
+  id: string;
+  lead_id: string;
+  user_id: string;
+  content: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
+async function createLeadComment({
+  lead_id,
+  user_id,
+  content = 'Comentário de teste',
+}: {
+  lead_id: string;
+  user_id: string;
+  content?: string;
+}): Promise<CreatedLeadComment> {
+  const { rows } = await getPool().query<CreatedLeadComment>(
+    `INSERT INTO lead_comments (lead_id, user_id, content)
+     VALUES ($1, $2, $3)
+     RETURNING id, lead_id, user_id, content, created_at, updated_at`,
+    [lead_id, user_id, content],
+  );
+  return rows[0];
+}
+
 async function uploadFile(userId: string, filename: string): Promise<string> {
   const filePath = `receipts/${userId}/${filename}`;
   const { error } = await getSupabase()
@@ -313,6 +462,10 @@ export default {
       createTimeEntry,
       createReimbursement,
       uploadFile,
+      createPortfolioItem,
+      createLead,
+      createLeadContact,
+      createLeadComment,
     },
   },
 };

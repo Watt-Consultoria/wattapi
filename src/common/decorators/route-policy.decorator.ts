@@ -5,7 +5,8 @@ export const ROUTE_POLICY_KEY = 'route_policy';
 export type RbaCondition =
   | 'self'
   | ['minRank', number]
-  | ['sector', string | string[]];
+  | ['sector', string | string[]]
+  | ['roleAndSector', { roles: string[]; sectors: string[] }];
 
 export type AccessPolicy =
   | { mode: 'unauthenticated' }
