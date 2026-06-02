@@ -139,6 +139,13 @@ export class RoutePolicyGuard implements CanActivate {
           } else {
             if (caller.sector === sectorValue) return true;
           }
+        } else if (type === 'roleAndSector') {
+          const { roles, sectors } = value as {
+            roles: string[];
+            sectors: string[];
+          };
+          if (roles.includes(caller.role) && sectors.includes(caller.sector))
+            return true;
         }
       }
     }
