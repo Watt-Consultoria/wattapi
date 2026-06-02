@@ -6,6 +6,7 @@ const NOT_FOUND_ID = '00000000-0000-0000-0000-000000000001';
 type LeadDetailBody = {
   id: string;
   company_name: string;
+  cnpj: string;
   status: string;
   created_by: string;
   created_at: string;
@@ -42,6 +43,7 @@ describe('GET /leads', () => {
       expect(Array.isArray(body)).toBe(true);
       expect(typeof body[0].id).toBe('string');
       expect(typeof body[0].company_name).toBe('string');
+      expect(typeof body[0].cnpj).toBe('string');
       expect(typeof body[0].status).toBe('string');
       expect(typeof body[0].created_by).toBe('string');
       expect(Array.isArray(body[0].contacts)).toBe(true);
@@ -201,6 +203,7 @@ describe('GET /leads/:id', () => {
       expect(response.status).toBe(200);
       expect(body.id).toBe(lead.id);
       expect(body.company_name).toBe('Empresa Detalhe Teste');
+      expect(typeof body.cnpj).toBe('string');
       expect(Array.isArray(body.contacts)).toBe(true);
       expect(Array.isArray(body.comments)).toBe(true);
       expect(Array.isArray(body.interest_items)).toBe(true);

@@ -6,6 +6,7 @@ const NOT_FOUND_ID = '00000000-0000-0000-0000-000000000001';
 type LeadBody = {
   id: string;
   company_name: string;
+  cnpj: string;
   status: string;
   interest_items: string[];
 };
@@ -76,6 +77,55 @@ describe('PATCH /leads/:id', () => {
 
       expect(response.status).toBe(200);
       expect(body.interest_items).toEqual([serviceName]);
+    });
+
+    test('Updating cnpj with a valid value returns 200 and includes new cnpj', async () => {
+      const user = await orchestrator.database.seed.createUser({
+        username: 'Consultor Leads Patch Cnpj',
+        email: `leads.patch.consultor.cnpj.${Date.now()}@watt-test.com`,
+        password: '',
+        role: 'consultor',
+        sector: 'comercial',
+      });
+      const lead = await orchestrator.database.seed.createLead({
+        created_by: user.id,
+      });
+
+      const response = await fetch(`${BASE_URL}/${lead.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: JSON.stringify({ cnpj: '98.765.432/0001-98' }),
+      });
+      const body = (await response.json()) as LeadBody;
+
+      expect(response.status).toBe(200);
+      expect(body.cnpj).toBe('98.765.432/0001-98');
+    });
+
+    test('Attempting to update with an invalid cnpj returns 400', async () => {
+      const user = await orchestrator.database.seed.createUser({
+        username: 'Consultor Leads Patch Bad Cnpj',
+        email: `leads.patch.consultor.badcnpj.${Date.now()}@watt-test.com`,
+        password: '',
+        role: 'consultor',
+        sector: 'comercial',
+      });
+      const lead = await orchestrator.database.seed.createLead({
+        created_by: user.id,
+      });
+
+      const response = await fetch(`${BASE_URL}/${lead.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: JSON.stringify({ cnpj: '11.111.111/1111-11' }),
+      });
+      expect(response.status).toBe(400);
     });
 
     test('Attempting to update with an invalid status returns 400', async () => {

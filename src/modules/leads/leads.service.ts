@@ -78,14 +78,15 @@ export class LeadsService {
 
     const { rows } = await this.db.query<LeadRow>(
       `INSERT INTO leads (
-         company_name, created_by, status,
+         company_name, cnpj, created_by, status,
          address_logradouro, address_numero, address_complemento,
          address_bairro, address_cidade, address_estado, address_cep,
          interest_items
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
        RETURNING *`,
       [
         dto.company_name,
+        dto.cnpj,
         callerId,
         dto.status ?? 'nao_contatado',
         dto.address_logradouro,
@@ -138,6 +139,7 @@ export class LeadsService {
 
     const fields: (keyof UpdateLeadDto)[] = [
       'company_name',
+      'cnpj',
       'address_logradouro',
       'address_numero',
       'address_complemento',
@@ -381,6 +383,7 @@ export class LeadsService {
     return {
       id: row.id,
       company_name: row.company_name,
+      cnpj: row.cnpj,
       created_by: row.created_by,
       status: row.status,
       address_logradouro: row.address_logradouro,

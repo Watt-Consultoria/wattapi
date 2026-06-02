@@ -319,6 +319,7 @@ async function createPortfolioItem({
 export interface CreatedLead {
   id: string;
   company_name: string;
+  cnpj: string;
   created_by: string;
   status: string;
   address_logradouro: string;
@@ -335,6 +336,7 @@ export interface CreatedLead {
 
 async function createLead({
   company_name = 'Empresa Teste',
+  cnpj = '12.345.678/0001-95',
   created_by,
   status = 'nao_contatado',
   address_logradouro = 'Rua Teste',
@@ -347,6 +349,7 @@ async function createLead({
   interest_items = [],
 }: {
   company_name?: string;
+  cnpj?: string;
   created_by: string;
   status?: string;
   address_logradouro?: string;
@@ -359,11 +362,12 @@ async function createLead({
   interest_items?: string[];
 }): Promise<CreatedLead> {
   const { rows } = await getPool().query<CreatedLead>(
-    `INSERT INTO leads (company_name, created_by, status, address_logradouro, address_numero, address_complemento, address_bairro, address_cidade, address_estado, address_cep, interest_items)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+    `INSERT INTO leads (company_name, cnpj, created_by, status, address_logradouro, address_numero, address_complemento, address_bairro, address_cidade, address_estado, address_cep, interest_items)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
      RETURNING *`,
     [
       company_name,
+      cnpj,
       created_by,
       status,
       address_logradouro,
