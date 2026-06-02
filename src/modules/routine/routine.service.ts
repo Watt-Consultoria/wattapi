@@ -45,9 +45,9 @@ function dbToSlots(rows: SlotRow[]): SlotsGrid {
 function canView(viewer: UserResponse, target: UserResponse): boolean {
   if (viewer.id === target.id) return true;
   const vRank = getRank(viewer.role);
+  if (vRank >= 3) return true;
   const tRank = getRank(target.role);
   if (vRank <= tRank) return false;
-  if (vRank >= 3) return true;
   return viewer.sector === target.sector;
 }
 
@@ -62,6 +62,10 @@ function buildSubordinatesFilter(viewer: UserResponse): SubordinatesFilter {
   if (rank > 0) allSubRoles.push('consultor');
   if (rank > 1) allSubRoles.push('gerente');
   if (rank > 2) allSubRoles.push('diretor');
+  if (rank >= 3) {
+    allSubRoles.push('assessor');
+    allSubRoles.push('presidente');
+  }
   return {
     roles: allSubRoles,
     sector: rank >= 3 ? null : viewer.sector,
