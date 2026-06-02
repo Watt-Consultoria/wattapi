@@ -84,7 +84,7 @@
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
     "testPathIgnorePatterns": [
-      ".*\\boilerplate.spec.ts"
+      "boilerplate\\.spec\\.ts"
     ],
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
