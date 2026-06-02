@@ -83,6 +83,9 @@
     "testTimeout": 120000,
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
+    "testPathIgnorePatterns": [
+      "boilerplate\\.spec\\.ts"
+    ],
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },

@@ -6,7 +6,7 @@ export interface AppSettings {
 }
 
 export const updateSettingsSchema = z.object({
-  min_week_hours: z.number().int().positive().optional(),
+  min_week_hours: z.number().int().positive().max(98).optional(),
   min_availability_hours: z.number().int().min(0).max(98).optional(),
 });
 
