@@ -15,6 +15,9 @@ import { RoutineModule } from './modules/routine/routine.module';
 import { ReimbursementsModule } from './modules/reimbursements/reimbursements.module';
 import { PortfolioModule } from './modules/portfolio/portfolio.module';
 import { LeadsModule } from './modules/leads/leads.module';
+import { EmailModule } from './modules/email/email.module';
+import { NormsModule } from './modules/norms/norms.module';
+import { ViolationsModule } from './modules/violations/violations.module';
 import { JwtGuard } from './common/guards/jwt.guard';
 
 @Module({
@@ -33,6 +36,9 @@ import { JwtGuard } from './common/guards/jwt.guard';
     ReimbursementsModule,
     PortfolioModule,
     LeadsModule,
+    EmailModule,
+    NormsModule,
+    ViolationsModule,
   ],
   providers: [
     {

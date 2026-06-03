@@ -14,6 +14,8 @@ const JWT_SECRET =
   process.env.JWT_SECRET ??
   'your-super-secret-jwt-key-with-at-least-32-characters';
 
+const emailHttpUrl = `http://${process.env.EMAIL_HTTP_HOST}:${process.env.EMAIL_HTTP_PORT}`;
+
 function getDatabaseUrl(): string {
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is not defined');
   return process.env.DATABASE_URL;
@@ -66,6 +68,8 @@ async function clearDatabase(): Promise<void> {
   await p.query('DELETE FROM lead_contacts');
   await p.query('DELETE FROM leads');
   await p.query('DELETE FROM portfolio_items');
+  await p.query('DELETE FROM member_violations');
+  await p.query('DELETE FROM company_norms');
   await p.query('DELETE FROM users');
   await p.query('DELETE FROM auth.users');
 }
@@ -441,6 +445,86 @@ async function createLeadComment({
   return rows[0];
 }
 
+export interface CreatedNorm {
+  id: string;
+  code: string;
+  description: string;
+  severity: 'leve' | 'moderada' | 'grave' | 'desligamento';
+}
+
+async function createNorm({
+  code = 'AN00',
+  description = 'Norma de teste',
+  severity = 'leve',
+}: {
+  code?: string;
+  description?: string;
+  severity?: 'leve' | 'moderada' | 'grave' | 'desligamento';
+} = {}): Promise<CreatedNorm> {
+  const { rows } = await getPool().query<CreatedNorm>(
+    `INSERT INTO company_norms (code, description, severity)
+     VALUES ($1, $2, $3)
+     RETURNING id, code, description, severity`,
+    [code, description, severity],
+  );
+  return rows[0];
+}
+
+export interface CreatedViolation {
+  id: string;
+  user_id: string;
+  norm_id: string;
+  applied_by: string;
+  reason: string | null;
+  expires_at: Date;
+  cancelled_at: Date | null;
+  cancelled_by: string | null;
+  applied_at: Date;
+}
+
+async function createViolation({
+  user_id,
+  norm_id,
+  applied_by,
+  reason = null,
+  cancelled_at = null,
+  cancelled_by = null,
+}: {
+  user_id: string;
+  norm_id: string;
+  applied_by: string;
+  reason?: string | null;
+  cancelled_at?: string | null;
+  cancelled_by?: string | null;
+}): Promise<CreatedViolation> {
+  const { rows } = await getPool().query<CreatedViolation>(
+    `INSERT INTO member_violations (user_id, norm_id, applied_by, reason, cancelled_at, cancelled_by)
+     VALUES ($1, $2, $3, $4, $5, $6)
+     RETURNING id, user_id, norm_id, applied_by, reason, expires_at, cancelled_at, cancelled_by, applied_at`,
+    [user_id, norm_id, applied_by, reason, cancelled_at, cancelled_by],
+  );
+  return rows[0];
+}
+
+type MailcatcherMessage = {
+  id: number;
+  recipients: string[];
+  subject: string;
+  text: string;
+};
+
+async function waitForLastEmail(
+  maxWait = 2000,
+): Promise<MailcatcherMessage | null> {
+  const start = Date.now();
+  while (Date.now() - start < maxWait) {
+    const email = await getLastEmail();
+    if (email) return email;
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  return null;
+}
+
 async function uploadFile(userId: string, filename: string): Promise<string> {
   const filePath = `receipts/${userId}/${filename}`;
   const { error } = await getSupabase()
@@ -451,6 +535,34 @@ async function uploadFile(userId: string, filename: string): Promise<string> {
     });
   if (error) throw new Error(`Storage upload failed: ${error.message}`);
   return filePath;
+}
+
+async function deleteAllEmails() {
+  await fetch(`${emailHttpUrl}/messages`, {
+    method: 'DELETE',
+  });
+}
+
+async function getLastEmail(): Promise<MailcatcherMessage | null> {
+  const emailListResponse = await fetch(`${emailHttpUrl}/messages`);
+  const emailListBody =
+    (await emailListResponse.json()) as MailcatcherMessage[];
+  const lastEmailItem = emailListBody.pop();
+
+  if (!lastEmailItem) {
+    return null;
+  }
+
+  lastEmailItem.recipients = lastEmailItem.recipients.map((r) =>
+    r.replace(/^<|>$/g, ''),
+  );
+
+  const emailTextResponse = await fetch(
+    `${emailHttpUrl}/messages/${lastEmailItem.id}.plain`,
+  );
+  lastEmailItem.text = await emailTextResponse.text();
+
+  return lastEmailItem;
 }
 
 export default {
@@ -470,6 +582,13 @@ export default {
       createLead,
       createLeadContact,
       createLeadComment,
+      createNorm,
+      createViolation,
     },
+  },
+  email: {
+    deleteAllEmails,
+    getLastEmail,
+    waitForLastEmail,
   },
 };
