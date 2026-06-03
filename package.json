@@ -26,7 +26,8 @@
     "services:db:reset": "supabase db reset --workdir ./src/database/",
     "services:migration:create": "supabase migration new --workdir ./src/database/",
     "services:migration:up": "supabase migration up --workdir ./src/database/",
-    "services:up": "npm run services:db:start"
+    "services:mailcatcher:start": "docker compose -f ./src/test/compose.yaml up -d",
+    "services:up": "npm run services:mailcatcher:start && npm run services:db:start"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
@@ -39,6 +40,7 @@
     "concurrently": "^9.2.1",
     "jose": "^4.15.9",
     "marked": "^15.0.12",
+    "nodemailer": "^8.0.10",
     "pg": "^8.21.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
@@ -55,6 +57,7 @@
     "@types/jest": "^30.0.0",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^24.0.0",
+    "@types/nodemailer": "^8.0.0",
     "@types/pg": "^8.20.0",
     "@types/supertest": "^7.0.0",
     "commitizen": "^4.3.1",

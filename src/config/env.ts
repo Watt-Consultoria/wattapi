@@ -11,6 +11,10 @@ export const envSchema = z.object({
   SUPABASE_ANON_KEY: z.string().min(1),
   SUPABASE_PUBLIC_KEY: z.string().min(1),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
+  EMAIL_SMTP_HOST: z.string().min(1),
+  EMAIL_SMTP_PORT: z.coerce.number().int().positive(),
+  EMAIL_SMTP_USER: z.string().optional(),
+  EMAIL_SMTP_PASSWORD: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

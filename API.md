@@ -1349,3 +1349,183 @@ Remove um comentário. Permitido para o criador ou para quem tem rank **estritam
 **Resposta 403** — Caller não é o criador nem tem rank superior
 
 **Resposta 404** — Comentário não encontrado
+
+---
+
+## Normas (Estatuto interno)
+
+### GET /norms
+
+Lista todas as normas do estatuto. Qualquer membro autenticado pode consultar.
+
+**Resposta 200** — Array de normas ordenadas por código
+
+```json
+[
+  { "id": "uuid", "code": "AN01", "description": "...", "severity": "leve", "created_at": "...", "updated_at": "..." }
+]
+```
+
+**Resposta 401** — Token ausente
+
+---
+
+### POST /norms
+
+Cria uma nova norma. Restrito a assessor e presidente (rank ≥ 3).
+
+**Body**
+
+```json
+{ "code": "AN32", "description": "Descrição da nova norma", "severity": "leve" }
+```
+
+Severidades válidas: `leve` · `moderada` · `grave` · `desligamento`
+
+**Resposta 201** — Norma criada
+
+**Resposta 400** — Campo obrigatório ausente ou inválido
+
+**Resposta 401** — Token ausente
+
+**Resposta 403** — Rank insuficiente
+
+**Resposta 409** — Código já existe
+
+---
+
+### PUT /norms/:id
+
+Edita descrição e/ou severidade de uma norma. O campo `code` é ignorado. Restrito a assessor e presidente.
+
+**Body**
+
+```json
+{ "description": "Nova descrição", "severity": "moderada" }
+```
+
+**Resposta 200** — Norma atualizada
+
+**Resposta 401** — Token ausente
+
+**Resposta 403** — Rank insuficiente
+
+**Resposta 404** — Norma não encontrada
+
+---
+
+### DELETE /norms/:id
+
+Remove permanentemente uma norma. Restrito a assessor e presidente. Falha com 409 se existirem faltas referenciando a norma.
+
+**Resposta 204** — Removida
+
+**Resposta 401** — Token ausente
+
+**Resposta 403** — Rank insuficiente
+
+**Resposta 404** — Norma não encontrada
+
+**Resposta 409** — Existem faltas associadas a essa norma
+
+---
+
+## Faltas (Violations)
+
+Sistema de registro de infrações ao estatuto interno. Pontuação: leve = 1 pt, moderada = 2 pt, grave = 6 pt, desligamento = 18 pt. Score ≥ 18 = risco de desligamento. Faltas expiram após 1 ano.
+
+### GET /violations/me
+
+Retorna as próprias faltas do caller com o placar acumulado. O campo `applied_by` é omitido.
+
+**Resposta 200**
+
+```json
+{
+  "violations": [
+    {
+      "id": "uuid", "user_id": "uuid",
+      "norm": { "id": "uuid", "code": "AN01", "description": "...", "severity": "leve", "points": 1 },
+      "reason": null, "status": "active",
+      "expires_at": "2027-06-02T00:00:00Z", "cancelled_at": null,
+      "applied_at": "2026-06-02T00:00:00Z", "created_at": "..."
+    }
+  ],
+  "summary": { "score": 1, "active_leves": 1, "active_moderadas": 0, "active_graves": 0, "active_desligamentos": 0, "at_risk": false }
+}
+```
+
+**Resposta 401** — Token ausente
+
+---
+
+### GET /violations
+
+Retorna faltas dos membros visíveis ao caller na hierarquia, sem `applied_by`. Suporta `?user_id=` para filtrar por membro específico.
+
+- Consultor: lista vazia (usar `/violations/me`)
+- Gerente: subordinados do mesmo setor
+- Diretor VEMKTU (comercial/marketing): subordinados de ambos os setores
+- Assessor/Presidente: todos os membros
+
+**Query params:** `user_id` (opcional) — UUID do membro a filtrar
+
+**Resposta 200** — Array de `{ user_id, violations[], summary }`
+
+**Resposta 401** — Token ausente
+
+**Resposta 403** — `user_id` fora da hierarquia do caller
+
+---
+
+### GET /violations/:id
+
+Retorna detalhes completos de uma falta, **incluindo** `applied_by`. Acessível pelo dono da falta ou por superiores hierárquicos.
+
+**Resposta 200** — Objeto de violation com `applied_by`
+
+**Resposta 401** — Token ausente
+
+**Resposta 403** — Sem autoridade sobre a falta
+
+**Resposta 404** — Falta não encontrada
+
+---
+
+### POST /violations
+
+Aplica uma falta a um membro. Requer rank ≥ 1 (gerente ou superior). O caller deve ter autoridade hierárquica sobre o alvo. Após a criação, um email é enviado ao membro infrator.
+
+**Body**
+
+```json
+{ "user_id": "uuid-do-membro", "norm_id": "uuid-da-norma", "reason": "Justificativa opcional" }
+```
+
+**Resposta 201** — Falta criada (inclui `applied_by`)
+
+**Resposta 400** — Campo obrigatório ausente
+
+**Resposta 401** — Token ausente
+
+**Resposta 403** — Sem autoridade hierárquica sobre o alvo
+
+**Resposta 404** — Membro ou norma não encontrado
+
+---
+
+### DELETE /violations/:id
+
+Cancela (soft-delete) uma falta. Faltas canceladas continuam aparecendo com `status: "cancelled"` mas não entram no score.
+
+Autorizado para: o próprio aplicador (`applied_by = caller`) ou quem tem rank > rank do aplicador.
+
+**Resposta 204** — Cancelada
+
+**Resposta 401** — Token ausente
+
+**Resposta 403** — Sem autoridade para cancelar
+
+**Resposta 404** — Falta não encontrada
+
+**Resposta 409** — Falta já cancelada
