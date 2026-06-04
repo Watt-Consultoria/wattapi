@@ -1,13 +1,15 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ConflictException } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import { SettingsService } from '../settings/settings.service';
 import { EmailService } from '../email/email.service';
 import { newViolationEmail } from '../../common/email/NewViolationEmail';
 import type { NormSeverity } from '../norms/dto/norm.dto';
 
-export type WeeklyAbsenceCheckResult =
-  | { week_start: string; users_checked: number; violations_applied: number }
-  | { already_ran: true };
+export type WeeklyAbsenceCheckResult = {
+  week_start: string;
+  users_checked: number;
+  violations_applied: number;
+};
 
 interface ActiveUser {
   id: string;
@@ -46,7 +48,9 @@ export class InternalService {
          AND date_trunc('week', ran_at) = date_trunc('week', now())`,
     );
     if (alreadyRan.rows.length > 0) {
-      return { already_ran: true };
+      throw new ConflictException(
+        'Weekly absence check has already been run for this week',
+      );
     }
 
     // Verify the current value of min_week_hours

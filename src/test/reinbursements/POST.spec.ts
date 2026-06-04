@@ -284,6 +284,7 @@ describe('POST /reimbursements', () => {
         role: 'presidente',
         sector: 'executivo',
       });
+
       const filePath = await orchestrator.database.seed.uploadFile(
         user.id,
         'comprovante.txt',

@@ -543,6 +543,7 @@ async function uploadFile(userId: string, filename: string): Promise<string> {
       upsert: true,
       contentType: 'text/plain',
     });
+
   if (error) throw new Error(`Storage upload failed: ${error.message}`);
   return filePath;
 }

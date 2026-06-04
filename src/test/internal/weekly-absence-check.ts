@@ -1,6 +1,7 @@
 import * as path from 'path';
 import { config } from 'dotenv';
 import orchestrator from '../orchestrator';
+import type { MeViolationsResponse } from '../../modules/violations/dto/violation.dto';
 
 config({
   path: [
@@ -21,7 +22,7 @@ type WeeklyAbsenceCheckResponse = {
 };
 
 type AlreadyRanResponse = {
-  already_ran: true;
+  message: string;
 };
 
 beforeAll(async () => {
@@ -30,9 +31,7 @@ beforeAll(async () => {
   await orchestrator.email.deleteAllEmails();
 });
 
-// ─── POST /internal/weekly-absence-check ─────────────────────────────────────
-
-describe('POST /internal/weekly-absence-check', () => {
+describe('WEEKLY ABSENCE CHECK', () => {
   describe('Authentication', () => {
     test('Without X-Internal-Secret header', async () => {
       const response = await fetch(BASE_URL, { method: 'POST' });
@@ -56,8 +55,8 @@ describe('POST /internal/weekly-absence-check', () => {
     });
   });
 
-  describe('First execution of the week', () => {
-    test('Processes active users and applies violations for those below min hours', async () => {
+  describe('Execution', () => {
+    test('With active users', async () => {
       await orchestrator.database.clear();
       await orchestrator.email.deleteAllEmails();
 
@@ -74,10 +73,28 @@ describe('POST /internal/weekly-absence-check', () => {
 
       const ts = Date.now();
 
+      // User with full hours → should not get violation (Above min_week_hours)
+      const member = await orchestrator.database.seed.createUser({
+        username: `Member Full Hours ${ts}`,
+        email: `internal.post.full.${ts}@watt-test.com`,
+        password: '',
+        role: 'consultor',
+        sector: 'projetos',
+      });
+
       // User with zero hours → should get AN13 (below half of min_week_hours)
       const memberAN13 = await orchestrator.database.seed.createUser({
         username: `Member AN13 ${ts}`,
         email: `internal.post.an13.${ts}@watt-test.com`,
+        password: '',
+        role: 'consultor',
+        sector: 'projetos',
+      });
+
+      // User with half of min_week_hours → should get AN07 (between half and full min_week_hours)
+      const memberAN07 = await orchestrator.database.seed.createUser({
+        username: `Member AN07 ${ts}`,
+        email: `internal.post.an07.${ts}@watt-test.com`,
         password: '',
         role: 'consultor',
         sector: 'projetos',
@@ -91,16 +108,38 @@ describe('POST /internal/weekly-absence-check', () => {
 
       expect(response.status).toBe(200);
       expect(body.week_start).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-      expect(body.users_checked).toBeGreaterThanOrEqual(1);
-      expect(body.violations_applied).toBeGreaterThanOrEqual(1);
+      expect(body.users_checked).toBe(3);
+      expect(body.violations_applied).toBe(2);
 
-      // Verify violation was inserted with source = 'automatic'
+      const violationAN07 = await fetch('http://localhost:3001/violations/me', {
+        headers: { Authorization: `Bearer ${memberAN07.token}` },
+      });
+      const violationAN07Body =
+        (await violationAN07.json()) as MeViolationsResponse;
+      expect(violationAN07Body.violations).toHaveLength(1);
+      expect(violationAN07Body.violations[0]).toHaveProperty('code', 'AN07');
+
+      const violationAN13 = await fetch('http://localhost:3001/violations/me', {
+        headers: { Authorization: `Bearer ${memberAN13.token}` },
+      });
+      const violationAN13Body =
+        (await violationAN13.json()) as MeViolationsResponse;
+      expect(violationAN13Body.violations).toHaveLength(1);
+      expect(violationAN13Body.violations[0]).toHaveProperty('code', 'AN13');
+
+      const noViolation = await fetch('http://localhost:3001/violations/me', {
+        headers: { Authorization: `Bearer ${member.token}` },
+      });
+      const noViolationBody =
+        (await noViolation.json()) as MeViolationsResponse;
+      expect(noViolationBody.violations).toHaveLength(0);
+
       const lastEmail = await orchestrator.email.waitForLastEmail();
       expect(lastEmail).not.toBeNull();
       expect(lastEmail!.recipients).toContain(memberAN13.email);
     });
 
-    test('Inactive users are ignored', async () => {
+    test('With inactive users', async () => {
       await orchestrator.database.clear();
       await orchestrator.email.deleteAllEmails();
 
@@ -129,10 +168,8 @@ describe('POST /internal/weekly-absence-check', () => {
       expect(body.users_checked).toBe(0);
       expect(body.violations_applied).toBe(0);
     });
-  });
 
-  describe('Idempotency', () => {
-    test('Second call in the same week returns 200 with already_ran = true and makes no changes', async () => {
+    test('for the second time at the same week', async () => {
       await orchestrator.database.clear();
       await orchestrator.email.deleteAllEmails();
 
@@ -151,8 +188,10 @@ describe('POST /internal/weekly-absence-check', () => {
       });
       const body = (await response.json()) as AlreadyRanResponse;
 
-      expect(response.status).toBe(200);
-      expect(body.already_ran).toBe(true);
+      expect(response.status).toBe(409);
+      expect(body.message).toBe(
+        'Weekly absence check has already been run for this week',
+      );
 
       const emailAfterSecondCall = await orchestrator.email.waitForLastEmail();
       expect(emailAfterSecondCall).toBeNull();

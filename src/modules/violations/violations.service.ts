@@ -145,8 +145,7 @@ export class ViolationsService {
 
     if (callerRank >= 3) {
       const result = await this.db.query<{ id: string }>(
-        `SELECT id FROM users WHERE inactive = false AND id != $1`,
-        [caller.id],
+        `SELECT id FROM users WHERE inactive = false`,
       );
       return result.rows.map((r) => r.id);
     }
