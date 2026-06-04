@@ -12,7 +12,7 @@
     "jest": true,
     "node": true
   },
-  "ignorePatterns": ["eslint.config.mjs"],
+  "ignorePatterns": ["eslint.config.mjs", "src/database/supabase/functions/**"],
   "rules": {
     "constructor-super": "error",
     "for-direction": "error",

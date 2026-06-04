@@ -1446,6 +1446,7 @@ Retorna as próprias faltas do caller com o placar acumulado. O campo `applied_b
     {
       "id": "uuid", "user_id": "uuid",
       "norm": { "id": "uuid", "code": "AN01", "description": "...", "severity": "leve", "points": 1 },
+      "source": "manual",
       "reason": null, "status": "active",
       "expires_at": "2027-06-02T00:00:00Z", "cancelled_at": null,
       "applied_at": "2026-06-02T00:00:00Z", "created_at": "..."
@@ -1482,7 +1483,7 @@ Retorna faltas dos membros visíveis ao caller na hierarquia, sem `applied_by`. 
 
 Retorna detalhes completos de uma falta, **incluindo** `applied_by`. Acessível pelo dono da falta ou por superiores hierárquicos.
 
-**Resposta 200** — Objeto de violation com `applied_by`
+**Resposta 200** — Objeto de violation com `applied_by` (nullable — `null` para faltas automáticas) e `source` (`"manual"` | `"automatic"`)
 
 **Resposta 401** — Token ausente
 
@@ -1502,7 +1503,7 @@ Aplica uma falta a um membro. Requer rank ≥ 1 (gerente ou superior). O caller 
 { "user_id": "uuid-do-membro", "norm_id": "uuid-da-norma", "reason": "Justificativa opcional" }
 ```
 
-**Resposta 201** — Falta criada (inclui `applied_by`)
+**Resposta 201** — Falta criada (inclui `applied_by` com UUID do caller e `source: "manual"`)
 
 **Resposta 400** — Campo obrigatório ausente
 
@@ -1529,3 +1530,40 @@ Autorizado para: o próprio aplicador (`applied_by = caller`) ou quem tem rank >
 **Resposta 404** — Falta não encontrada
 
 **Resposta 409** — Falta já cancelada
+
+---
+
+## Jobs Internos (/internal)
+
+Endpoints do namespace `/internal` são para uso exclusivo de automações internas. **Não requerem JWT.** Toda requisição deve incluir o header `X-Internal-Secret` com o valor da env var `INTERNAL_JOB_SECRET`. Requests sem o header ou com valor incorreto retornam 401.
+
+---
+
+### POST /internal/weekly-absence-check
+
+Verifica as horas registradas na semana anterior para todos os usuários ativos e aplica a falta correspondente a quem ficou abaixo de `min_week_hours`. Sem parâmetros de entrada — opera de forma autônoma.
+
+**Regra de seleção de norma:**
+- `total_minutes >= min_week_hours * 60` → sem falta
+- `total_minutes >= (min_week_hours / 2) * 60` → falta AN07 (leve)
+- `total_minutes < (min_week_hours / 2) * 60` → falta AN13 (moderada)
+
+Faltas são inseridas com `source = "automatic"` e `applied_by = null`. Um email é enviado ao membro para cada falta aplicada.
+
+**Idempotência:** se o job já foi executado na semana corrente, retorna 200 com `{ already_ran: true }` sem processar nada.
+
+**Auth:** `X-Internal-Secret: <INTERNAL_JOB_SECRET>`
+
+**Resposta 200 — Execução normal**
+
+```json
+{ "week_start": "2026-06-01", "users_checked": 12, "violations_applied": 3 }
+```
+
+**Resposta 200 — Já executado esta semana**
+
+```json
+{ "already_ran": true }
+```
+
+**Resposta 401** — Header ausente ou secret incorreto

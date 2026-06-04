@@ -6,7 +6,10 @@ import * as jwt from 'jsonwebtoken';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 config({
-  path: path.resolve(__dirname, '../..', '.env.development'),
+  path: [
+    path.resolve(__dirname, '../..', '.env'),
+    path.resolve(__dirname, '../..', '.env.development'),
+  ],
   quiet: true,
 });
 
@@ -70,6 +73,7 @@ async function clearDatabase(): Promise<void> {
   await p.query('DELETE FROM portfolio_items');
   await p.query('DELETE FROM member_violations');
   await p.query('DELETE FROM company_norms');
+  await p.query('DELETE FROM internal_job_runs');
   await p.query('DELETE FROM users');
   await p.query('DELETE FROM auth.users');
 }
@@ -474,7 +478,7 @@ export interface CreatedViolation {
   id: string;
   user_id: string;
   norm_id: string;
-  applied_by: string;
+  applied_by: string | null;
   reason: string | null;
   expires_at: Date;
   cancelled_at: Date | null;
@@ -498,12 +502,18 @@ async function createViolation({
   cancelled_by?: string | null;
 }): Promise<CreatedViolation> {
   const { rows } = await getPool().query<CreatedViolation>(
-    `INSERT INTO member_violations (user_id, norm_id, applied_by, reason, cancelled_at, cancelled_by)
-     VALUES ($1, $2, $3, $4, $5, $6)
+    `INSERT INTO member_violations (user_id, norm_id, applied_by, source, reason, cancelled_at, cancelled_by)
+     VALUES ($1, $2, $3, 'manual', $4, $5, $6)
      RETURNING id, user_id, norm_id, applied_by, reason, expires_at, cancelled_at, cancelled_by, applied_at`,
     [user_id, norm_id, applied_by, reason, cancelled_at, cancelled_by],
   );
   return rows[0];
+}
+
+async function deactivateUser(userId: string): Promise<void> {
+  await getPool().query(`UPDATE users SET inactive = true WHERE id = $1`, [
+    userId,
+  ]);
 }
 
 type MailcatcherMessage = {
@@ -584,6 +594,7 @@ export default {
       createLeadComment,
       createNorm,
       createViolation,
+      deactivateUser,
     },
   },
   email: {

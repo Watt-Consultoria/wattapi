@@ -1,4 +1,5 @@
 {
+  "exclude": ["src/database/supabase"],
   "compilerOptions": {
     "module": "nodenext",
     "moduleResolution": "nodenext",

@@ -8,13 +8,13 @@
   "scripts": {
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+    "lint": "oxlint --fix --deny-warnings src/ test/ && prettier --check \"src/**/*.ts\" \"test/**/*.ts\"",
+    "lint:fix": "oxlint --fix --deny-warnings src/ test/ && npm run format",
     "start": "nest start",
     "start:devbase": "nest start --watch",
     "start:dev": "npm run services:up && npm run services:db:reset && nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
-    "lint": "oxlint --fix --deny-warnings src/ test/ && prettier --check \"src/**/*.ts\" \"test/**/*.ts\"",
-    "lint:fix": "oxlint --fix --deny-warnings src/ test/ && npm run format",
     "test": "npm run services:up && npm run services:db:reset && concurrently -n nest,jest --hide nest -s command-jest -k \"nest start\" \"wait-on http://localhost:3001/status && jest\"",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
@@ -27,7 +27,8 @@
     "services:migration:create": "supabase migration new --workdir ./src/database/",
     "services:migration:up": "supabase migration up --workdir ./src/database/",
     "services:mailcatcher:start": "docker compose -f ./src/test/compose.yaml up -d",
-    "services:up": "npm run services:mailcatcher:start && npm run services:db:start"
+    "services:up": "npm run services:mailcatcher:start && npm run services:db:start",
+    "services:edge:start": "supabase functions serve --workdir ./src/database/"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
@@ -64,6 +65,7 @@
     "cz-conventional-changelog": "^3.3.0",
     "husky": "^9.1.7",
     "jest": "^30.0.0",
+    "lint-staged": "^17.0.7",
     "oxlint": "^1.67.0",
     "oxlint-tsgolint": "^0.23.0",
     "prettier": "^3.4.2",
@@ -106,5 +108,11 @@
     "commitizen": {
       "path": "./node_modules/cz-conventional-changelog"
     }
+  },
+  "lint-staged": {
+    "*.{ts,js}": [
+      "oxlint --fix --deny-warnings",
+      "prettier --write"
+    ]
   }
 }
