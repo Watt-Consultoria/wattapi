@@ -35,7 +35,7 @@ const SEVERITY_POINTS: Record<NormSeverity, number> = {
 };
 
 const VIOLATION_SELECT = `
-  mv.id, mv.user_id, mv.norm_id, mv.applied_by, mv.reason,
+  mv.id, mv.user_id, mv.norm_id, mv.applied_by, mv.source, mv.reason,
   mv.expires_at, mv.cancelled_at, mv.cancelled_by, mv.applied_at, mv.created_at,
   cn.code AS norm_code, cn.description AS norm_description, cn.severity AS norm_severity
 `;
@@ -68,6 +68,7 @@ function toResponse(
       severity: row.norm_severity,
       points: SEVERITY_POINTS[row.norm_severity],
     },
+    source: row.source,
     reason: row.reason,
     status: getStatus(row),
     expires_at: row.expires_at.toISOString(),
@@ -359,6 +360,7 @@ export class ViolationsService {
         | 'user_id'
         | 'norm_id'
         | 'applied_by'
+        | 'source'
         | 'reason'
         | 'expires_at'
         | 'cancelled_at'
@@ -367,9 +369,9 @@ export class ViolationsService {
         | 'created_at'
       >
     >(
-      `INSERT INTO member_violations (user_id, norm_id, applied_by, reason)
-       VALUES ($1, $2, $3, $4)
-       RETURNING id, user_id, norm_id, applied_by, reason, expires_at, cancelled_at, cancelled_by, applied_at, created_at`,
+      `INSERT INTO member_violations (user_id, norm_id, applied_by, source, reason)
+       VALUES ($1, $2, $3, 'manual', $4)
+       RETURNING id, user_id, norm_id, applied_by, source, reason, expires_at, cancelled_at, cancelled_by, applied_at, created_at`,
       [dto.user_id, dto.norm_id, caller.id, dto.reason ?? null],
     );
 
@@ -387,9 +389,9 @@ export class ViolationsService {
   async cancel(id: string, caller: UserResponse): Promise<void> {
     const result = await this.db.query<{
       id: string;
-      applied_by: string;
+      applied_by: string | null;
       cancelled_at: Date | null;
-      applied_by_role: string;
+      applied_by_role: string | null;
       target_email: string;
       target_name: string;
       norm_code: string;
@@ -401,7 +403,7 @@ export class ViolationsService {
               u_target.email AS target_email, u_target.name AS target_name,
               cn.code AS norm_code, cn.description AS norm_description, cn.severity AS norm_severity
        FROM member_violations mv
-       JOIN users u_applier ON u_applier.id = mv.applied_by
+       LEFT JOIN users u_applier ON u_applier.id = mv.applied_by
        JOIN users u_target ON u_target.id = mv.user_id
        JOIN company_norms cn ON cn.id = mv.norm_id
        WHERE mv.id = $1`,
@@ -422,8 +424,8 @@ export class ViolationsService {
       !canCancelViolation(
         caller.id,
         caller.role,
-        row.applied_by,
-        row.applied_by_role,
+        row.applied_by ?? '',
+        row.applied_by_role ?? '',
       )
     ) {
       throw new ForbiddenException(

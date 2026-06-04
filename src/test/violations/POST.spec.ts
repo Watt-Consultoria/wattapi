@@ -10,7 +10,8 @@ type ViolationResponse = {
   status: string;
   expires_at: string;
   applied_at: string;
-  applied_by: string;
+  applied_by: string | null;
+  source: 'manual' | 'automatic';
 };
 
 beforeAll(async () => {
@@ -99,6 +100,7 @@ describe('POST /violations', () => {
       expect(body.user_id).toBe(consultor.id);
       expect(body.norm.severity).toBe('moderada');
       expect(body.applied_by).toBe(gerente.id);
+      expect(body.source).toBe('manual');
 
       const email = (await orchestrator.email.waitForLastEmail()) as {
         recipients: string[];

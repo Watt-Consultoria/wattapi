@@ -12,6 +12,7 @@ export const envSchema = z.object({
   EMAIL_SMTP_PORT: z.coerce.number().int().positive(),
   EMAIL_SMTP_USER: z.string(),
   EMAIL_SMTP_PASSWORD: z.string(),
+  INTERNAL_JOB_SECRET: z.string().min(16),
 });
 
 export type Env = z.infer<typeof envSchema>;

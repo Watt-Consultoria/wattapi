@@ -22,7 +22,8 @@ export interface ViolationRow {
   id: string;
   user_id: string;
   norm_id: string;
-  applied_by: string;
+  applied_by: string | null;
+  source: 'manual' | 'automatic';
   reason: string | null;
   expires_at: Date;
   cancelled_at: Date | null;
@@ -44,6 +45,7 @@ export interface ViolationResponse {
     severity: NormSeverity;
     points: number;
   };
+  source: 'manual' | 'automatic';
   reason: string | null;
   status: ViolationStatus;
   expires_at: string;
@@ -53,7 +55,7 @@ export interface ViolationResponse {
 }
 
 export interface ViolationResponseWithAppliedBy extends ViolationResponse {
-  applied_by: string;
+  applied_by: string | null;
 }
 
 export interface ViolationSummary {
