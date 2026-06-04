@@ -35,13 +35,17 @@ export class ViolationsController {
   constructor(private readonly violationsService: ViolationsService) {}
 
   @Get('me')
-  @RoutePolicy({ access: { mode: 'authenticated' } })
+  @RoutePolicy({
+    access: { mode: 'authenticated' },
+  })
   findMine(@Req() req: AuthRequest): Promise<MeViolationsResponse> {
     return this.violationsService.findMine(req.jwtData.sub);
   }
 
   @Get()
-  @RoutePolicy({ access: { mode: 'authenticated' } })
+  @RoutePolicy({
+    access: { mode: 'authenticated' },
+  })
   findSubordinates(
     @Req() req: AuthRequest,
     @Query('user_id') userId?: string,
@@ -50,7 +54,9 @@ export class ViolationsController {
   }
 
   @Get(':id')
-  @RoutePolicy({ access: { mode: 'authenticated' } })
+  @RoutePolicy({
+    access: { mode: 'authenticated' },
+  })
   findOne(
     @Param('id') id: string,
     @Req() req: AuthRequest,
@@ -60,7 +66,11 @@ export class ViolationsController {
 
   @Post()
   @HttpCode(201)
-  @RoutePolicy({ access: { mode: 'authenticated', rba: [['minRank', 1]] } })
+  @RoutePolicy({
+    access: {
+      mode: 'authenticated',
+    },
+  })
   create(
     @Body() body: unknown,
     @Req() req: AuthRequest,
@@ -74,7 +84,9 @@ export class ViolationsController {
 
   @Delete(':id')
   @HttpCode(204)
-  @RoutePolicy({ access: { mode: 'authenticated' } })
+  @RoutePolicy({
+    access: { mode: 'authenticated' },
+  })
   cancel(@Param('id') id: string, @Req() req: AuthRequest): Promise<void> {
     return this.violationsService.cancel(id, req.user);
   }

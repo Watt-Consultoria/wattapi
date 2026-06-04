@@ -47,7 +47,12 @@ export class RoutineController {
   }
 
   @Get('summary')
-  @RoutePolicy({ access: { mode: 'authenticated', rba: [['minRank', 1]] } })
+  @RoutePolicy({
+    access: {
+      mode: 'authenticated',
+      rba: [['role', ['gerente', 'diretor', 'assessor', 'presidente']]],
+    },
+  })
   getSummary(@Req() req: AuthRequest): Promise<SummaryResponse> {
     return this.routineService.getSummary(req.user);
   }

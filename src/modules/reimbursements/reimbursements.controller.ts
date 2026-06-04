@@ -66,7 +66,9 @@ export class ReimbursementsController {
   }
 
   @Patch(':id/status')
-  @RoutePolicy({ access: { mode: 'authenticated', rba: [['minRank', 4]] } })
+  @RoutePolicy({
+    access: { mode: 'authenticated', rba: [['role', ['presidente']]] },
+  })
   updateStatus(
     @Param('id') id: string,
     @Body() body: unknown,

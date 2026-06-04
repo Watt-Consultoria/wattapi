@@ -29,7 +29,12 @@ export class NormsController {
 
   @Post()
   @HttpCode(201)
-  @RoutePolicy({ access: { mode: 'authenticated', rba: [['minRank', 3]] } })
+  @RoutePolicy({
+    access: {
+      mode: 'authenticated',
+      rba: [['role', ['assessor', 'presidente']]],
+    },
+  })
   create(@Body() body: unknown): Promise<NormResponse> {
     const result = createNormSchema.safeParse(body);
     if (!result.success) {
@@ -39,7 +44,12 @@ export class NormsController {
   }
 
   @Put(':id')
-  @RoutePolicy({ access: { mode: 'authenticated', rba: [['minRank', 3]] } })
+  @RoutePolicy({
+    access: {
+      mode: 'authenticated',
+      rba: [['role', ['assessor', 'presidente']]],
+    },
+  })
   update(
     @Param('id') id: string,
     @Body() body: unknown,
@@ -53,7 +63,12 @@ export class NormsController {
 
   @Delete(':id')
   @HttpCode(204)
-  @RoutePolicy({ access: { mode: 'authenticated', rba: [['minRank', 3]] } })
+  @RoutePolicy({
+    access: {
+      mode: 'authenticated',
+      rba: [['role', ['assessor', 'presidente']]],
+    },
+  })
   remove(@Param('id') id: string): Promise<void> {
     return this.normsService.delete(id);
   }

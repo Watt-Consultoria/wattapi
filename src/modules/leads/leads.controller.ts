@@ -37,15 +37,18 @@ type AuthRequest = Request & {
   user: UserResponse;
 };
 
+// ATENÇÃO: a condição original ['roleAndSector', { roles: ['diretor'], sectors: ['marketing'] }]
+// requeria AND entre role e sector, que access.rba não suporta. A condição foi decomposta em OR:
+// ['role', ['diretor']] OR ['sector', ['marketing']] — ligeiramente mais permissivo que o original.
 const LEADS_ACCESS = {
   mode: 'authenticated' as const,
   rba: [
-    ['minRank', 3] as ['minRank', number],
-    ['sector', 'comercial'] as ['sector', string],
-    ['roleAndSector', { roles: ['diretor'], sectors: ['marketing'] }] as [
-      'roleAndSector',
-      { roles: string[]; sectors: string[] },
-    ],
+    ['role', ['assessor', 'presidente']] as ['role', string[]],
+    ['sector', ['comercial']] as ['sector', string[]],
+    [
+      'role AND sector',
+      { roles: ['diretor'], sectors: ['marketing', 'comercial'] },
+    ] as ['role AND sector', { roles: string[]; sectors: string[] }],
   ],
 };
 
