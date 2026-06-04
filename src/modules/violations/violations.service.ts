@@ -1,6 +1,7 @@
 import {
   ConflictException,
   ForbiddenException,
+  InternalServerErrorException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -302,6 +303,55 @@ export class ViolationsService {
       );
     }
 
+    const summaryResult = await this.db.query<{
+      severity: NormSeverity;
+      count: string;
+    }>(
+      `SELECT cn.severity, COUNT(*) AS count
+       FROM member_violations mv
+       JOIN company_norms cn ON cn.id = mv.norm_id
+       WHERE mv.user_id = $1 AND mv.cancelled_at IS NULL AND mv.expires_at > now()
+       GROUP BY cn.severity`,
+      [dto.user_id],
+    );
+    const counts: Record<NormSeverity, number> = {
+      leve: 0,
+      moderada: 0,
+      grave: 0,
+      desligamento: 0,
+    };
+    for (const row of summaryResult.rows) {
+      counts[row.severity] = parseInt(row.count, 10);
+    }
+    const currentScore =
+      counts.leve * 1 +
+      counts.moderada * 2 +
+      counts.grave * 6 +
+      counts.desligamento * 18;
+
+    try {
+      await this.emailService.send({
+        to: target.email,
+        ...newViolationEmail({
+          memberName: target.name,
+          normCode: norm.code,
+          normDescription: norm.description,
+          severity: norm.severity,
+          points: SEVERITY_POINTS[norm.severity],
+          reason: dto.reason ?? null,
+          expiresAt: new Date(
+            Date.now() + 365 * 24 * 60 * 60 * 1000,
+          ).toISOString(),
+          currentScore,
+          atRisk: currentScore >= 18,
+        }),
+      });
+    } catch {
+      throw new InternalServerErrorException(
+        `Violation applied but failed to send email notification to ${target.email}`,
+      );
+    }
+
     const insertResult = await this.db.query<
       Pick<
         ViolationRow,
@@ -330,47 +380,6 @@ export class ViolationsService {
       norm_description: norm.description,
       norm_severity: norm.severity,
     };
-
-    const summaryResult = await this.db.query<{
-      severity: NormSeverity;
-      count: string;
-    }>(
-      `SELECT cn.severity, COUNT(*) AS count
-       FROM member_violations mv
-       JOIN company_norms cn ON cn.id = mv.norm_id
-       WHERE mv.user_id = $1 AND mv.cancelled_at IS NULL AND mv.expires_at > now()
-       GROUP BY cn.severity`,
-      [dto.user_id],
-    );
-    const counts: Record<NormSeverity, number> = {
-      leve: 0,
-      moderada: 0,
-      grave: 0,
-      desligamento: 0,
-    };
-    for (const row of summaryResult.rows) {
-      counts[row.severity] = parseInt(row.count, 10);
-    }
-    const currentScore =
-      counts.leve * 1 +
-      counts.moderada * 2 +
-      counts.grave * 6 +
-      counts.desligamento * 18;
-
-    void this.emailService.send({
-      to: target.email,
-      ...newViolationEmail({
-        memberName: target.name,
-        normCode: norm.code,
-        normDescription: norm.description,
-        severity: norm.severity,
-        points: SEVERITY_POINTS[norm.severity],
-        reason: dto.reason ?? null,
-        expiresAt: inserted.expires_at.toISOString(),
-        currentScore,
-        atRisk: currentScore >= 18,
-      }),
-    });
 
     return toResponse(fakeRow, true);
   }
