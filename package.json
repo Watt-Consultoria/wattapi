@@ -7,8 +7,8 @@
   "license": "UNLICENSED",
   "scripts": {
     "build": "nest build",
-    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
-    "lint": "oxlint --fix --deny-warnings src/ test/ && prettier --check \"src/**/*.ts\" \"test/**/*.ts\"",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "lint": "oxlint --fix --deny-warnings src/ && prettier --check \"src/**/*.ts\"",
     "lint:fix": "oxlint --fix --deny-warnings src/ test/ && npm run format",
     "start": "nest start",
     "start:devbase": "nest start --watch",

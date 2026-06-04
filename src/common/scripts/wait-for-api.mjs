@@ -8,6 +8,7 @@ dotenv.config({
 function checkAPI() {
   exec(`curl --silent --fail http://localhost:3001/status`, handleReturn);
 
+  /** @param {Error | null} error @param {string} stdout */
   function handleReturn(error, stdout) {
     if (error || !stdout.includes('opened_connections')) {
       process.stdout.write('.');

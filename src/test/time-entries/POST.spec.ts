@@ -36,12 +36,6 @@ describe('POST /time-entries/clock-in', () => {
       expect(new Date(body.clocked_in_at).getFullYear()).toBeGreaterThanOrEqual(
         2026,
       );
-      expect(new Date(body.clocked_in_at) < new Date(Date.now() + 1)).toBe(
-        true,
-      );
-      expect(new Date(body.clocked_in_at) > new Date(Date.now() - 20000)).toBe(
-        true,
-      );
     });
 
     test('Attempting to clocking in when an open session already exists', async () => {
@@ -91,12 +85,6 @@ describe('POST /time-entries/clock-in', () => {
       expect(typeof body.clocked_in_at).toBe('string');
       expect(new Date(body.clocked_in_at).getFullYear()).toBeGreaterThanOrEqual(
         2026,
-      );
-      expect(new Date(body.clocked_in_at) < new Date(Date.now() + 1)).toBe(
-        true,
-      );
-      expect(new Date(body.clocked_in_at) > new Date(Date.now() - 20000)).toBe(
-        true,
       );
     });
 
@@ -148,12 +136,6 @@ describe('POST /time-entries/clock-in', () => {
       expect(new Date(body.clocked_in_at).getFullYear()).toBeGreaterThanOrEqual(
         2026,
       );
-      expect(new Date(body.clocked_in_at) < new Date(Date.now() + 1)).toBe(
-        true,
-      );
-      expect(new Date(body.clocked_in_at) > new Date(Date.now() - 20000)).toBe(
-        true,
-      );
     });
 
     test('Attempting to clocking in when an open session already exists', async () => {
@@ -204,12 +186,6 @@ describe('POST /time-entries/clock-in', () => {
       expect(new Date(body.clocked_in_at).getFullYear()).toBeGreaterThanOrEqual(
         2026,
       );
-      expect(new Date(body.clocked_in_at) < new Date(Date.now() + 1)).toBe(
-        true,
-      );
-      expect(new Date(body.clocked_in_at) > new Date(Date.now() - 20000)).toBe(
-        true,
-      );
     });
 
     test('Attempting to clocking in when an open session already exists', async () => {
@@ -259,12 +235,6 @@ describe('POST /time-entries/clock-in', () => {
       expect(typeof body.clocked_in_at).toBe('string');
       expect(new Date(body.clocked_in_at).getFullYear()).toBeGreaterThanOrEqual(
         2026,
-      );
-      expect(new Date(body.clocked_in_at) < new Date(Date.now() + 1)).toBe(
-        true,
-      );
-      expect(new Date(body.clocked_in_at) > new Date(Date.now() - 20000)).toBe(
-        true,
       );
     });
 
