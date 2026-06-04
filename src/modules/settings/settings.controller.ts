@@ -26,7 +26,12 @@ export class SettingsController {
 
   @Patch()
   @HttpCode(200)
-  @RoutePolicy({ access: { mode: 'authenticated', rba: [['minRank', 3]] } })
+  @RoutePolicy({
+    access: {
+      mode: 'authenticated',
+      rba: [['role', ['assessor', 'presidente']]],
+    },
+  })
   async updateSettings(@Body() body: unknown): Promise<AppSettings> {
     const result = updateSettingsSchema.safeParse(body);
     if (!result.success) {

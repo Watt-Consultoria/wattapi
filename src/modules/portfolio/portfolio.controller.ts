@@ -32,7 +32,12 @@ export class PortfolioController {
 
   @Post()
   @HttpCode(201)
-  @RoutePolicy({ access: { mode: 'authenticated', rba: [['minRank', 2]] } })
+  @RoutePolicy({
+    access: {
+      mode: 'authenticated',
+      rba: [['role', ['diretor', 'assessor', 'presidente']]],
+    },
+  })
   create(@Body() body: unknown): Promise<PortfolioItemResponse> {
     const result = createPortfolioItemSchema.safeParse(body);
     if (!result.success) {
@@ -42,7 +47,12 @@ export class PortfolioController {
   }
 
   @Patch(':id')
-  @RoutePolicy({ access: { mode: 'authenticated', rba: [['minRank', 2]] } })
+  @RoutePolicy({
+    access: {
+      mode: 'authenticated',
+      rba: [['role', ['diretor', 'assessor', 'presidente']]],
+    },
+  })
   update(
     @Param('id') id: string,
     @Body() body: unknown,
@@ -56,7 +66,12 @@ export class PortfolioController {
 
   @Delete(':id')
   @HttpCode(204)
-  @RoutePolicy({ access: { mode: 'authenticated', rba: [['minRank', 2]] } })
+  @RoutePolicy({
+    access: {
+      mode: 'authenticated',
+      rba: [['role', ['diretor', 'assessor', 'presidente']]],
+    },
+  })
   async remove(@Param('id') id: string): Promise<void> {
     return this.portfolioService.remove(id);
   }

@@ -8,26 +8,18 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
-import { DatabaseService } from '../../database/database.service';
 import type { UserResponse } from '../../modules/users/users.service';
-import { getRank, isSuperuser } from './role-hierarchy';
 import type { JwtData, JwtStatus } from './jwt.guard';
 import {
   ROUTE_POLICY_KEY,
-  type RbaCondition,
+  type RbaAccessCondition,
   type RoutePolicyOptions,
 } from '../decorators/route-policy.decorator';
-
-export interface ResolvedPolicy {
-  canAccess: true;
-  writableFields?: string[];
-}
 
 type PolicyRequest = Request & {
   jwtStatus: JwtStatus;
   jwtData?: JwtData;
   user?: UserResponse;
-  policy: ResolvedPolicy;
   params: Record<string, string>;
 };
 
@@ -41,58 +33,53 @@ const MESSAGES = {
 
 @Injectable()
 export class RoutePolicyGuard implements CanActivate {
-  constructor(
-    private readonly reflector: Reflector,
-    private readonly db: DatabaseService,
-  ) {}
+  constructor(private readonly reflector: Reflector) {}
 
-  async canActivate(context: ExecutionContext): Promise<boolean> {
+  canActivate(context: ExecutionContext): boolean {
+    // Extrai o contexto da rota: Metadados definidos através do decorador @RoutePolicy e informações da requisição HTTP
     const policy = this.reflector.get<RoutePolicyOptions>(
       ROUTE_POLICY_KEY,
       context.getHandler(),
     );
+    const request = context.switchToHttp().getRequest<PolicyRequest>();
 
+    // Exige que a política de acesso seja definida para cada rota protegida por este guard
     if (!policy?.access) {
-      return true;
+      throw new Error('Route policy acess options not defined');
     }
 
-    const request = context.switchToHttp().getRequest<PolicyRequest>();
-    const { access, write } = policy;
+    const { access } = policy;
     const { mode } = access;
     const jwtStatus = request.jwtStatus;
 
     if (mode === 'unauthenticated') {
       // no requirements
-    } else if (mode === 'unexistent') {
-      this.requireClaims(jwtStatus);
+      return true;
+    }
+
+    this.requireClaims(jwtStatus);
+
+    // Usuário que existe na tabela de autenticação, mas não na tabela de usuários (ex: cadastro incompleto)
+    if (mode === 'unexistent') {
+      // Exige que o usuário não exista na tabela de usuários
       if (jwtStatus === 'ok') {
         throw new ConflictException(MESSAGES.alreadyRegistered);
       }
-    } else {
-      // authenticated
-      this.requireClaims(jwtStatus);
+    }
+
+    if (mode === 'authenticated') {
       if (jwtStatus === 'user-not-found') {
         throw new UnauthorizedException(MESSAGES.userNotFound);
       }
 
-      const rba = access.rba;
-      if (rba && rba.length > 0) {
+      const acessRba = access.rba;
+
+      if (acessRba && acessRba.length > 0) {
         const caller = request.user!;
-        const targetId = request.params?.user_id;
-        const passed = await this.evaluateRba(rba, caller, targetId);
+        const passed = this.evaluateRba(acessRba, caller);
         if (!passed) throw new ForbiddenException();
       }
     }
-
-    const caller = request.user;
-    request.policy = {
-      canAccess: true,
-      writableFields: write
-        ? caller && isSuperuser(caller.role)
-          ? write.superuser
-          : write.self
-        : undefined,
-    };
 
     return true;
   }
@@ -109,54 +96,32 @@ export class RoutePolicyGuard implements CanActivate {
     }
   }
 
-  private async evaluateRba(
-    rba: RbaCondition[],
-    caller: UserResponse,
-    targetId: string | undefined,
-  ): Promise<boolean> {
+  private evaluateRba(rba: RbaAccessCondition[], caller: UserResponse) {
     for (const condition of rba) {
-      if (condition === 'self') {
-        if (targetId && caller.id === targetId) return true;
-      } else if (Array.isArray(condition)) {
+      if (Array.isArray(condition)) {
         const [type, value] = condition;
 
-        if (type === 'minRank') {
-          const n = value;
-          if (getRank(caller.role) >= n) {
-            if (targetId) {
-              if (caller.id === targetId) continue; // self not allowed via minRank alone
-              const targetRole = await this.loadTargetRole(targetId);
-              if (targetRole === null) return true; // target not found, let service handle 404
-              if (getRank(caller.role) > getRank(targetRole)) return true;
-            } else {
-              return true;
-            }
-          }
-        } else if (type === 'sector') {
-          const sectorValue = value;
-          if (Array.isArray(sectorValue)) {
-            if (sectorValue.includes(caller.sector)) return true;
-          } else {
-            if (caller.sector === sectorValue) return true;
-          }
-        } else if (type === 'roleAndSector') {
-          const { roles, sectors } = value as {
-            roles: string[];
-            sectors: string[];
-          };
-          if (roles.includes(caller.role) && sectors.includes(caller.sector))
+        if (type === 'role') {
+          if (value.includes(caller.role)) {
             return true;
+          }
+        }
+
+        if (type === 'sector') {
+          const sectorValue = value;
+          if (sectorValue.includes(caller.sector)) return true;
+        }
+
+        if (type === 'role AND sector') {
+          const { roles, sectors } = value;
+
+          if (roles.includes(caller.role) && sectors.includes(caller.sector)) {
+            return true;
+          }
         }
       }
     }
-    return false;
-  }
 
-  private async loadTargetRole(id: string): Promise<string | null> {
-    const result = await this.db.query<{ role: string }>(
-      'SELECT role FROM users WHERE id = $1 AND inactive = false',
-      [id],
-    );
-    return result.rows[0]?.role ?? null;
+    return false;
   }
 }
