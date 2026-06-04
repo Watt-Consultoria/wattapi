@@ -27,7 +27,8 @@
     "services:migration:create": "supabase migration new --workdir ./src/database/",
     "services:migration:up": "supabase migration up --workdir ./src/database/",
     "services:mailcatcher:start": "docker compose -f ./src/test/compose.yaml up -d",
-    "services:up": "npm run services:mailcatcher:start && npm run services:db:start"
+    "services:up": "npm run services:mailcatcher:start && npm run services:db:start",
+    "services:edge:start": "supabase functions serve --workdir ./src/database/"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
