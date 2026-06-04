@@ -6,7 +6,6 @@ export const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
   JWT_SECRET: z.string().min(32),
   SUPABASE_URL: z.string().min(1),
-  SUPABASE_ANON_KEY: z.string().min(1),
   SUPABASE_PUBLIC_KEY: z.string().min(1),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
   EMAIL_SMTP_HOST: z.string().min(1),

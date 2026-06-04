@@ -6,7 +6,10 @@ import * as jwt from 'jsonwebtoken';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 config({
-  path: path.resolve(__dirname, '../..', '.env.development'),
+  path: [
+    path.resolve(__dirname, '../..', '.env'),
+    path.resolve(__dirname, '../..', '.env.development'),
+  ],
   quiet: true,
 });
 
