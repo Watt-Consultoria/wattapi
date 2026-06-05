@@ -19,6 +19,8 @@ import { EmailModule } from './modules/email/email.module';
 import { NormsModule } from './modules/norms/norms.module';
 import { ViolationsModule } from './modules/violations/violations.module';
 import { InternalModule } from './modules/internal/internal.module';
+import { HousesModule } from './modules/houses/houses.module';
+import { GamificationModule } from './modules/gamification/gamification.module';
 import { JwtGuard } from './common/guards/jwt.guard';
 
 @Module({
@@ -41,6 +43,8 @@ import { JwtGuard } from './common/guards/jwt.guard';
     NormsModule,
     ViolationsModule,
     InternalModule,
+    HousesModule,
+    GamificationModule,
   ],
   providers: [
     {

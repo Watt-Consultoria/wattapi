@@ -4,7 +4,7 @@ import { EnvService } from './config/env.service';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
-    logger: ['error', 'warn'],
+    logger: ['log', 'error', 'warn'],
   });
 
   const envService = app.get(EnvService);
