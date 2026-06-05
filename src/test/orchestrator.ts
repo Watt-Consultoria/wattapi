@@ -62,6 +62,9 @@ async function waitForAllServices(): Promise<void> {
 
 async function clearDatabase(): Promise<void> {
   const p = getPool();
+  await p.query('DELETE FROM gamification_submissions');
+  await p.query('DELETE FROM gamification_tasks');
+  await p.query('DELETE FROM gamification_cycles');
   await p.query('DELETE FROM notifications');
   await p.query('DELETE FROM activities');
   await p.query('DELETE FROM time_entries');
@@ -516,6 +519,131 @@ async function deactivateUser(userId: string): Promise<void> {
   ]);
 }
 
+export interface HouseRow {
+  id: string;
+  name: string;
+}
+
+async function getHouses(): Promise<HouseRow[]> {
+  const { rows } = await getPool().query<HouseRow>(
+    `SELECT id, name FROM houses ORDER BY name`,
+  );
+  return rows;
+}
+
+async function assignHouse(userId: string, houseId: string): Promise<void> {
+  await getPool().query(`UPDATE users SET house_id = $1 WHERE id = $2`, [
+    houseId,
+    userId,
+  ]);
+}
+
+export interface CreatedCycle {
+  id: string;
+  name: string;
+  started_at: Date;
+  ended_at: Date | null;
+  created_by: string;
+}
+
+async function createCycle({
+  name = 'Ciclo de Teste',
+  created_by,
+}: {
+  name?: string;
+  created_by: string;
+}): Promise<CreatedCycle> {
+  const { rows } = await getPool().query<CreatedCycle>(
+    `INSERT INTO gamification_cycles (name, created_by)
+     VALUES ($1, $2)
+     RETURNING id, name, started_at, ended_at, created_by`,
+    [name, created_by],
+  );
+  return rows[0];
+}
+
+export interface CreatedGamTask {
+  id: string;
+  title: string;
+  description: string;
+  points: number;
+  is_active: boolean;
+  created_by: string;
+}
+
+async function createGamTask({
+  title = 'Tarefa de Teste',
+  description = 'Descrição da tarefa de teste',
+  points = 10,
+  is_active = true,
+  created_by,
+}: {
+  title?: string;
+  description?: string;
+  points?: number;
+  is_active?: boolean;
+  created_by: string;
+}): Promise<CreatedGamTask> {
+  const { rows } = await getPool().query<CreatedGamTask>(
+    `INSERT INTO gamification_tasks (title, description, points, is_active, created_by)
+     VALUES ($1, $2, $3, $4, $5)
+     RETURNING id, title, description, points, is_active, created_by`,
+    [title, description, points, is_active, created_by],
+  );
+  return rows[0];
+}
+
+export interface CreatedSubmission {
+  id: string;
+  task_id: string;
+  user_id: string;
+  house_id: string;
+  cycle_id: string;
+  description: string;
+  file_path: string;
+  status: string;
+}
+
+async function createSubmission({
+  task_id,
+  user_id,
+  house_id,
+  cycle_id,
+  description = 'Comprovante de teste',
+  file_path,
+}: {
+  task_id: string;
+  user_id: string;
+  house_id: string;
+  cycle_id: string;
+  description?: string;
+  file_path: string;
+}): Promise<CreatedSubmission> {
+  const { rows } = await getPool().query<CreatedSubmission>(
+    `INSERT INTO gamification_submissions (task_id, user_id, house_id, cycle_id, description, file_path)
+     VALUES ($1, $2, $3, $4, $5, $6)
+     RETURNING id, task_id, user_id, house_id, cycle_id, description, file_path, status`,
+    [task_id, user_id, house_id, cycle_id, description, file_path],
+  );
+  return rows[0];
+}
+
+async function uploadGamificationFile(
+  userId: string,
+  filename: string,
+): Promise<string> {
+  const filePath = `proofs/${userId}/${filename}`;
+  const { error } = await getSupabase()
+    .storage.from('gamification-proofs')
+    .upload(filePath, Buffer.from('comprovante de teste'), {
+      upsert: true,
+      contentType: 'text/plain',
+    });
+
+  if (error) throw new Error(`Storage upload failed: ${error.message}`);
+  return filePath;
+}
+
 type MailcatcherMessage = {
   id: number;
   recipients: string[];
@@ -596,6 +724,12 @@ export default {
       createNorm,
       createViolation,
       deactivateUser,
+      getHouses,
+      assignHouse,
+      createCycle,
+      createGamTask,
+      createSubmission,
+      uploadGamificationFile,
     },
   },
   email: {

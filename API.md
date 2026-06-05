@@ -1567,3 +1567,270 @@ Faltas são inseridas com `source = "automatic"` e `applied_by = null`. Um email
 ```
 
 **Resposta 401** — Header ausente ou secret incorreto
+
+---
+
+## Houses (Casas Hogwatts)
+
+### GET /houses
+
+Lista as 3 casas fixas (Lumina, Voltus, Nexus) com a pontuação total de cada uma no ciclo ativo.
+
+**Auth:** Token JWT de usuário autenticado
+
+**Resposta 200**
+
+```json
+[
+  { "id": "uuid", "name": "Lumina", "total_points": 150 },
+  { "id": "uuid", "name": "Voltus", "total_points": 95 },
+  { "id": "uuid", "name": "Nexus", "total_points": 210 }
+]
+```
+
+---
+
+### GET /houses/:id/members
+
+Lista os membros de uma casa específica.
+
+**Auth:** Token JWT de usuário autenticado
+
+**Resposta 200** — Array de usuários com `house_id` igual ao id informado
+
+**Resposta 404** — Casa inexistente
+
+---
+
+### PATCH /houses/members/:user_id
+
+Atribui um usuário a uma casa. Apenas assessores e presidentes.
+
+**Auth:** Token JWT de assessor ou presidente
+
+**Body:**
+
+```json
+{ "house_id": "uuid-da-casa" }
+```
+
+**Resposta 200** — Usuário atualizado com `house_id`
+
+**Resposta 403** — Papel não autorizado
+
+**Resposta 404** — Usuário ou casa inexistente
+
+---
+
+## Gamification — Ciclos
+
+### GET /gamification/cycles
+
+Lista todos os ciclos em ordem decrescente de `started_at`.
+
+**Auth:** Token JWT de usuário autenticado
+
+---
+
+### GET /gamification/cycles/active
+
+Retorna o ciclo ativo (sem `ended_at`).
+
+**Auth:** Token JWT de usuário autenticado
+
+**Resposta 200**
+
+```json
+{
+  "id": "uuid",
+  "name": "1º Semestre 2026",
+  "started_at": "2026-06-04T00:00:00Z",
+  "ended_at": null,
+  "created_by": "uuid-do-criador",
+  "created_at": "2026-06-04T00:00:00Z"
+}
+```
+
+**Resposta 404** — Nenhum ciclo ativo
+
+---
+
+### POST /gamification/cycles
+
+Cria um novo ciclo. Falha se já houver um ciclo ativo.
+
+**Auth:** Token JWT de assessor ou presidente
+
+**Body:**
+
+```json
+{ "name": "1º Semestre 2026" }
+```
+
+**Resposta 201** — Ciclo criado
+
+**Resposta 409** — Já existe um ciclo ativo
+
+---
+
+### PATCH /gamification/cycles/:id/close
+
+Encerra o ciclo. Bloqueado se houver submissões pendentes.
+
+**Auth:** Token JWT de assessor ou presidente
+
+**Resposta 200** — Ciclo com `ended_at` preenchido
+
+**Resposta 409** — Submissões pendentes ou ciclo já encerrado
+
+---
+
+## Gamification — Tarefas
+
+### GET /gamification/tasks
+
+Lista as tarefas ativas. Assessores e presidentes podem incluir inativas com `?include_inactive=true`.
+
+**Auth:** Token JWT de usuário autenticado
+
+---
+
+### POST /gamification/tasks
+
+Cria uma nova tarefa. Apenas assessores e presidentes.
+
+**Auth:** Token JWT de assessor ou presidente
+
+**Body:**
+
+```json
+{
+  "title": "Participar de vídeo do marketing",
+  "description": "Aparecer em um vídeo oficial da Watt Consultoria",
+  "points": 50
+}
+```
+
+**Resposta 201** — Tarefa criada com `is_active: true`
+
+---
+
+### PATCH /gamification/tasks/:id
+
+Edita uma tarefa (título, descrição, pontos, ativo/inativo). Apenas assessores e presidentes.
+
+**Auth:** Token JWT de assessor ou presidente
+
+**Body (parcial):**
+
+```json
+{ "points": 75, "is_active": false }
+```
+
+**Resposta 200** — Tarefa atualizada
+
+**Resposta 404** — Tarefa inexistente
+
+---
+
+## Gamification — Submissões
+
+### POST /gamification/submissions
+
+Submete um comprovante de conclusão de tarefa. O arquivo deve ser enviado previamente ao bucket `gamification-proofs` do Supabase Storage e o caminho informado em `file_path`.
+
+**Auth:** Token JWT de usuário autenticado
+
+**Validações:** usuário com casa atribuída, ciclo ativo existente, tarefa ativa, arquivo no storage.
+
+**Body:**
+
+```json
+{
+  "task_id": "uuid-da-tarefa",
+  "description": "Participei do vídeo em 04/06/2026",
+  "file_path": "proofs/uuid-do-usuario/nome-do-arquivo.pdf"
+}
+```
+
+**Resposta 201** — Submissão criada com `status: "pending"`, `house_id` e `cycle_id` snapshots
+
+**Resposta 400** — Usuário sem casa, sem ciclo ativo, tarefa inativa ou arquivo não encontrado
+
+---
+
+### GET /gamification/submissions
+
+Lista submissões. Usuários comuns veem apenas as próprias; assessores/presidentes podem filtrar com `?status=pending` e/ou `?user_id=uuid`.
+
+**Auth:** Token JWT de usuário autenticado
+
+**Resposta 200** — Array de submissões com `file_url` (signed URL válida por 1h)
+
+---
+
+### PATCH /gamification/submissions/:id/review
+
+Aprova ou rejeita uma submissão pendente. Apenas assessores e presidentes.
+
+**Auth:** Token JWT de assessor ou presidente
+
+**Body:**
+
+```json
+{
+  "status": "approved",
+  "rejection_reason": "opcional — apenas para rejections"
+}
+```
+
+**Resposta 200** — Submissão atualizada com `reviewed_by` e `reviewed_at`
+
+**Resposta 409** — Submissão já revisada
+
+**Resposta 404** — Submissão inexistente
+
+---
+
+## Gamification — Leaderboard
+
+### GET /gamification/leaderboard
+
+Placar das 3 casas. Por padrão usa o ciclo ativo; aceita `?cycle_id=uuid` para ciclos históricos.
+
+**Auth:** Token JWT de usuário autenticado
+
+**Resposta 200** — Casas ordenadas por `total_points` decrescente
+
+```json
+[
+  { "house_id": "uuid", "house_name": "Nexus", "total_points": 210 },
+  { "house_id": "uuid", "house_name": "Lumina", "total_points": 150 },
+  { "house_id": "uuid", "house_name": "Voltus", "total_points": 95 }
+]
+```
+
+**Resposta 404** — Nenhum ciclo ativo e nenhum `cycle_id` informado
+
+---
+
+### GET /gamification/leaderboard/podium
+
+Pódio individual dos membros de uma casa. Parâmetro `house_id` é obrigatório; `cycle_id` é opcional (padrão: ciclo ativo).
+
+**Auth:** Token JWT de usuário autenticado
+
+**Query:** `?house_id=uuid[&cycle_id=uuid]`
+
+**Resposta 200**
+
+```json
+[
+  { "user_id": "uuid", "user_name": "Danilo Silva", "points_contributed": 150, "approved_count": 3 },
+  { "user_id": "uuid", "user_name": "Tauan Barros", "points_contributed": 60, "approved_count": 2 }
+]
+```
+
+**Resposta 400** — `house_id` ausente
+
+**Resposta 404** — Nenhum ciclo ativo e `cycle_id` não informado

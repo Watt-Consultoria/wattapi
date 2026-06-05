@@ -13,6 +13,7 @@ export interface UserResponse {
   role: string;
   sector: string;
   cpf: string;
+  house_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -24,6 +25,7 @@ interface UserRow {
   role: string;
   sector: string;
   cpf: string;
+  house_id: string | null;
   created_at: Date;
   updated_at: Date;
   inactive: boolean;
@@ -31,7 +33,13 @@ interface UserRow {
 
 function toResponse(row: UserRow): UserResponse {
   return {
-    ...row,
+    id: row.id,
+    email: row.email,
+    name: row.name,
+    role: row.role,
+    sector: row.sector,
+    cpf: row.cpf,
+    house_id: row.house_id,
     created_at: row.created_at.toISOString(),
     updated_at: row.updated_at.toISOString(),
   };
@@ -49,7 +57,7 @@ function throwPgError(err: unknown): never {
 }
 
 const SELECT_FIELDS =
-  'id, email, name, role, sector, cpf, created_at, updated_at';
+  'id, email, name, role, sector, cpf, house_id, created_at, updated_at';
 
 @Injectable()
 export class UsersService {

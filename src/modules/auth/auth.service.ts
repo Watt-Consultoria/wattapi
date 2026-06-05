@@ -9,6 +9,7 @@ interface UserRow {
   role: string;
   sector: string;
   cpf: string;
+  house_id: string | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -19,7 +20,7 @@ export class AuthService {
 
   async resolveUser(id: string): Promise<UserResponse> {
     const result = await this.db.query<UserRow>(
-      `SELECT id, email, name, role, sector, cpf, created_at, updated_at
+      `SELECT id, email, name, role, sector, cpf, house_id, created_at, updated_at
        FROM users WHERE id = $1 AND inactive = false`,
       [id],
     );

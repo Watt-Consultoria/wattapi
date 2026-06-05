@@ -93,7 +93,32 @@ from unnest(array[0, 2, 4]) as d,
      generate_series(9, 20) as h
 on conflict do nothing;
 
--- Trigger: auto-promove yan.lima para presidente independente do UUID (cobre login via Google OAuth) (Para conta de desenvolvimento) 
+-- Atribuição de casas Hogwatts para usuários de dev
+update users set house_id = (select id from houses where name = 'Lumina')
+where email in (
+  'luis.cardoso@wattconsultoria.com.br',
+  'sandro.filho@wattconsultoria.com.br',
+  'danilo.silva@wattconsultoria.com.br',
+  'tauan.barros@wattconsultoria.com.br'
+);
+
+update users set house_id = (select id from houses where name = 'Voltus')
+where email in (
+  'julius.cesar@wattconsultoria.com.br',
+  'guilherme.albuquerque@wattconsultoria.com.br',
+  'luiz.araujo@wattconsultoria.com.br'
+);
+
+update users set house_id = (select id from houses where name = 'Nexus')
+where email in (
+  'dante.lourenco@wattconsultoria.com.br',
+  'gustavo.araujo@wattconsultoria.com.br',
+  'edgar.nascimento@wattconsultoria.com.br',
+  'julia.vieira@wattconsultoria.com.br',
+  'yanlima@wattconsultoria.com.br'
+);
+
+-- Trigger: auto-promove yan.lima para presidente independente do UUID (cobre login via Google OAuth) (Para conta de desenvolvimento)
 create or replace function promote_bootstrap_superusers()
 returns trigger language plpgsql as $$
 begin
