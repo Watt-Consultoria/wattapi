@@ -1,7 +1,13 @@
 import { z } from 'zod';
 
 export const assignHouseSchema = z.object({
-  house_id: z.string().uuid().nullable(),
+  house_id: z
+    .string()
+    .regex(
+      /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/i,
+      'Invalid UUID',
+    )
+    .nullable(),
 });
 
 export type AssignHouseDto = z.infer<typeof assignHouseSchema>;

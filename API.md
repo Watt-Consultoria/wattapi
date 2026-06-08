@@ -1834,3 +1834,406 @@ Pódio individual dos membros de uma casa. Parâmetro `house_id` é obrigatório
 **Resposta 400** — `house_id` ausente
 
 **Resposta 404** — Nenhum ciclo ativo e `cycle_id` não informado
+
+---
+
+## Processo Seletivo
+
+### `POST /selection-process`
+
+Cria um novo processo seletivo. Rejeita se o range de datas sobrepõe um processo já existente.
+
+**Auth:** `assessor` ou `presidente`
+
+**Body**
+
+```json
+{
+  "title": "Processo Seletivo 2026.1",
+  "starts_at": "2026-03-01T00:00:00Z",
+  "ends_at": "2026-04-01T00:00:00Z"
+}
+```
+
+**Resposta 201**
+
+```json
+{
+  "id": "uuid",
+  "title": "Processo Seletivo 2026.1",
+  "starts_at": "2026-03-01T00:00:00.000Z",
+  "ends_at": "2026-04-01T00:00:00.000Z",
+  "created_at": "2026-01-15T10:00:00.000Z"
+}
+```
+
+**Resposta 400** — `ends_at` anterior ou igual a `starts_at`
+
+**Resposta 401** — Sem token
+
+**Resposta 403** — Role insuficiente
+
+**Resposta 409** — Range sobrepõe processo existente
+
+---
+
+### `PATCH /selection-process/:processId`
+
+Atualiza os dados de um processo seletivo. Todos os campos são opcionais. Se `starts_at` ou `ends_at` forem alterados, a validação de `ends_at > starts_at` e de sobreposição de range é reexecutada.
+
+**Auth:** `assessor` ou `presidente`
+
+**Body** (todos opcionais, pelo menos um obrigatório)
+
+```json
+{
+  "title": "PS 2026.2",
+  "starts_at": "2026-08-01T00:00:00Z",
+  "ends_at": "2026-09-01T00:00:00Z"
+}
+```
+
+**Resposta 200** — Processo atualizado (mesmo shape do POST 201)
+
+**Resposta 400** — Nenhum campo fornecido, ou `ends_at` resultante anterior a `starts_at`
+
+**Resposta 401** — Sem token
+
+**Resposta 403** — Role insuficiente
+
+**Resposta 404** — Processo não encontrado
+
+**Resposta 409** — Range resultante sobrepõe outro processo existente
+
+---
+
+### `GET /selection-process`
+
+Lista todos os processos seletivos ordenados por `starts_at` decrescente.
+
+**Auth:** Qualquer usuário autenticado
+
+**Resposta 200** — Array de processos (mesmo shape do POST 201)
+
+---
+
+### `POST /selection-process/applications`
+
+**Rota pública** — Submete uma candidatura ao processo seletivo atualmente ativo. O frontend deve fazer upload dos 3 arquivos para o bucket `selection-process-files` (Supabase Storage) antes de chamar este endpoint, e enviar os paths resultantes.
+
+**Auth:** Nenhuma (pública)
+
+**Body**
+
+```json
+{
+  "name": "João da Silva",
+  "course": "Engenharia de Software",
+  "period": 5,
+  "phone": "11999990000",
+  "email": "joao@example.com",
+  "instagram": "@joaosilva",
+  "how_heard": "Indicação de amigo",
+  "motivation": "Quero aprender e crescer profissionalmente",
+  "why_watt": "A Watt tem projetos alinhados com meus valores",
+  "shirt_size": "M",
+  "resume_path": "550e8400-e29b-41d4-a716-446655440000/resume.pdf",
+  "transcript_path": "550e8400-e29b-41d4-a716-446655440000/transcript.pdf",
+  "photo_path": "550e8400-e29b-41d4-a716-446655440000/photo.jpg"
+}
+```
+
+**Campos:**
+- `shirt_size`: enum `P | M | G | GG | XG`
+- `period`: inteiro positivo
+- `resume_path`, `transcript_path`, `photo_path`: formato `{uuid}/{resume|transcript|photo}.{ext}`
+
+**Resposta 201**
+
+```json
+{
+  "id": "uuid",
+  "created_at": "2026-03-10T14:00:00.000Z"
+}
+```
+
+**Resposta 400** — Campo ausente, formato de path inválido, ou arquivo não encontrado no Storage
+
+**Resposta 404** — Nenhum processo seletivo ativo no momento
+
+**Resposta 409** — Email já cadastrado neste processo seletivo
+
+---
+
+### `GET /selection-process/applications`
+
+Lista candidaturas. Sem filtro retorna todas. Com `?selection_process_id=uuid` filtra por processo. A resposta inclui URLs assinadas (válidas por 1h) para os 3 arquivos de cada candidatura.
+
+**Auth:** Qualquer usuário autenticado
+
+**Query:** `?selection_process_id=uuid` (opcional)
+
+**Resposta 200**
+
+```json
+[
+  {
+    "id": "uuid",
+    "selection_process_id": "uuid",
+    "name": "João da Silva",
+    "course": "Engenharia de Software",
+    "period": 5,
+    "phone": "11999990000",
+    "email": "joao@example.com",
+    "instagram": "@joaosilva",
+    "how_heard": "Indicação de amigo",
+    "motivation": "Quero aprender e crescer profissionalmente",
+    "why_watt": "A Watt tem projetos alinhados com meus valores",
+    "shirt_size": "M",
+    "status": "pending",
+    "resume_signed_url": "https://...",
+    "transcript_signed_url": "https://...",
+    "photo_signed_url": "https://...",
+    "created_at": "2026-03-10T14:00:00.000Z"
+  }
+]
+```
+
+**Resposta 404** — `selection_process_id` informado não existe
+
+---
+
+### `PATCH /selection-process/applications/:applicationId`
+
+Atualiza o status de uma candidatura.
+
+**Auth:** `assessor` ou `presidente`
+
+**Body**
+
+```json
+{ "status": "approved" }
+```
+
+**Campos:**
+- `status`: enum `pending | approved | reproved | waitlisted`
+
+**Side-effects:**
+- `approved`: cria candidato na etapa 1 do processo (400 se não existirem etapas; 409 se candidato já existir) e envia email de aprovação
+- `reproved`: envia email de rejeição ao candidato
+- `pending` / `waitlisted`: apenas atualiza o campo, sem side-effects
+
+**Resposta 200** — Candidatura atualizada (mesmo shape do GET applications item)
+
+**Resposta 400** — Status inválido ou processo sem etapas cadastradas
+
+**Resposta 401** — Sem token
+
+**Resposta 403** — Role insuficiente
+
+**Resposta 404** — Candidatura não encontrada
+
+**Resposta 409** — Candidato já existe para esta candidatura
+
+---
+
+### `POST /selection-process/stages`
+
+Cria uma etapa em um processo seletivo.
+
+**Auth:** `assessor` ou `presidente`
+
+**Body**
+
+```json
+{
+  "selection_process_id": "uuid",
+  "name": "Entrevista",
+  "position": 1
+}
+```
+
+**Campos:**
+- `selection_process_id`: UUID do processo (obrigatório)
+- `name`: nome da etapa (obrigatório)
+- `position`: número inteiro positivo; deve ser único por processo (obrigatório)
+- `shift` (opcional, default `false`): quando `true`, todas as etapas com `position >= position` são deslocadas +1 antes de inserir a nova. Útil para inserir uma etapa entre etapas existentes sem conflito.
+
+**Resposta 201**
+
+```json
+{
+  "id": "uuid",
+  "selection_process_id": "uuid",
+  "name": "Entrevista",
+  "position": 1,
+  "created_at": "2026-06-07T10:00:00.000Z"
+}
+```
+
+**Resposta 400** — Campo ausente ou position ≤ 0
+
+**Resposta 401** — Sem token
+
+**Resposta 403** — Role insuficiente
+
+**Resposta 404** — Processo não encontrado
+
+**Resposta 409** — Posição já existe neste processo (apenas quando `shift = false`)
+
+---
+
+### `PUT /selection-process/stages/:stageId`
+
+Atualiza nome e/ou posição de uma etapa. Quando a posição alvo já está ocupada por outra etapa do mesmo processo, as posições são trocadas automaticamente (swap atômico).
+
+**Auth:** `assessor` ou `presidente`
+
+**Body** (pelo menos um campo obrigatório)
+
+```json
+{ "name": "Entrevista Técnica", "position": 2 }
+```
+
+**Comportamento de position:**
+- Posição livre → apenas move a etapa
+- Posição ocupada por outra etapa → troca as posições das duas etapas atomicamente
+
+**Resposta 200** — Etapa atualizada
+
+```json
+{
+  "id": "uuid",
+  "selection_process_id": "uuid",
+  "name": "Entrevista Técnica",
+  "position": 2,
+  "created_at": "2026-06-07T10:00:00.000Z"
+}
+```
+
+**Resposta 400** — Nenhum campo fornecido ou position ≤ 0
+
+**Resposta 401** — Sem token
+
+**Resposta 403** — Role insuficiente
+
+**Resposta 404** — Etapa não encontrada
+
+---
+
+### `GET /selection-process/stages`
+
+Lista etapas de processos seletivos, ordenadas por `position` ascendente.
+
+**Auth:** Obrigatória
+
+**Query params:**
+- `selection_process_id` (opcional): filtra por processo
+
+**Resposta 200**
+
+```json
+[
+  {
+    "id": "uuid",
+    "selection_process_id": "uuid",
+    "name": "Entrevista",
+    "position": 1,
+    "created_at": "2026-06-07T10:00:00.000Z"
+  }
+]
+```
+
+**Resposta 401** — Sem token
+
+**Resposta 404** — Processo filtrado não encontrado
+
+---
+
+### `GET /selection-process/candidates`
+
+Lista candidatos criados a partir de candidaturas aprovadas.
+
+**Auth:** Obrigatória
+
+**Query params:**
+- `selection_process_id` (opcional): filtra por processo
+- `stage_id` (opcional): filtra por etapa atual
+
+**Resposta 200**
+
+```json
+[
+  {
+    "id": "uuid",
+    "application_id": "uuid",
+    "selection_process_id": "uuid",
+    "current_stage_id": "uuid",
+    "name": "João Silva",
+    "course": "Engenharia",
+    "period": 3,
+    "phone": "11999990000",
+    "email": "joao@example.com",
+    "photo_signed_url": "https://...",
+    "shirt_size": "M",
+    "status": "active",
+    "created_at": "2026-06-07T10:00:00.000Z"
+  }
+]
+```
+
+**Resposta 401** — Sem token
+
+**Resposta 404** — Processo filtrado não encontrado
+
+---
+
+### `PATCH /selection-process/candidates/:candidateId`
+
+Avança ou elimina um candidato em uma etapa.
+
+**Auth:** `assessor` ou `presidente`
+
+**Body**
+
+```json
+{ "status": "approved" }
+```
+
+**Campos:**
+- `status`: `approved` (avançar/aprovar final) ou `reproved` (eliminar)
+
+**Comportamento:**
+- `approved` com próxima etapa: avança `current_stage_id` para position+1, mantém status `active`, envia email de avanço
+- `approved` na última etapa: atualiza status para `approved`, envia email de aprovação final
+- `reproved`: atualiza status para `eliminated`, envia email de eliminação
+
+**Resposta 200** — Candidato atualizado
+
+```json
+{
+  "id": "uuid",
+  "application_id": "uuid",
+  "selection_process_id": "uuid",
+  "current_stage_id": "uuid",
+  "name": "João Silva",
+  "course": "Engenharia",
+  "period": 3,
+  "phone": "11999990000",
+  "email": "joao@example.com",
+  "photo_signed_url": "https://...",
+  "shirt_size": "M",
+  "status": "eliminated",
+  "created_at": "2026-06-07T10:00:00.000Z"
+}
+```
+
+**Resposta 400** — Status inválido
+
+**Resposta 401** — Sem token
+
+**Resposta 403** — Role insuficiente
+
+**Resposta 404** — Candidato não encontrado
+
+**Resposta 409** — Candidato já finalizado (eliminated ou approved)
