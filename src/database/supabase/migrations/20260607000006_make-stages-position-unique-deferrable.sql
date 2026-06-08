@@ -1,0 +1,6 @@
+ALTER TABLE selection_process_stages
+  DROP CONSTRAINT selection_process_stages_selection_process_id_position_key;
+
+ALTER TABLE selection_process_stages
+  ADD CONSTRAINT selection_process_stages_selection_process_id_position_key
+  UNIQUE (selection_process_id, position) DEFERRABLE INITIALLY IMMEDIATE;

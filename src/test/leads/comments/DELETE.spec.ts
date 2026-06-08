@@ -12,7 +12,7 @@ beforeAll(async () => {
 
 describe('DELETE /leads/:id/comments/:comment_id', () => {
   describe('Authenticated CONSULTOR do comercial (creator)', () => {
-    test('Creator deleting own comment returns 204', async () => {
+    test('Deleting own comment', async () => {
       const user = await orchestrator.database.seed.createUser({
         username: 'Consultor Comment Delete Creator',
         email: `comments.delete.creator.${Date.now()}@watt-test.com`,
@@ -39,7 +39,7 @@ describe('DELETE /leads/:id/comments/:comment_id', () => {
       expect(response.status).toBe(204);
     });
 
-    test('User with same rank who is not the creator attempting to delete returns 403', async () => {
+    test('Attempting to delete a comment from another user', async () => {
       const owner = await orchestrator.database.seed.createUser({
         username: 'Owner Comment Delete Same Rank',
         email: `comments.delete.owner.samerank.${Date.now()}@watt-test.com`,

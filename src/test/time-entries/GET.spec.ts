@@ -94,12 +94,8 @@ describe('GET /time-entries/summary/me', () => {
         role: 'consultor',
         sector: 'comercial',
       });
-      const fiveHoursAgo = new Date(Date.now() - 5 * 60 * 60 * 1000);
-      const oneHourAgo = new Date(Date.now() - 1 * 60 * 60 * 1000);
-      await orchestrator.database.seed.createTimeEntry({
+      await orchestrator.database.seed.createCurrentWeekTimeEntry({
         user_id: consultor.id,
-        clocked_in_at: fiveHoursAgo.toISOString(),
-        clocked_out_at: oneHourAgo.toISOString(),
       });
 
       const response = await fetch(`${BASE_URL}/summary/me`, {
@@ -200,12 +196,8 @@ describe('GET /time-entries/summary/me', () => {
         role: 'gerente',
         sector: 'comercial',
       });
-      const fiveHoursAgo = new Date(Date.now() - 5 * 60 * 60 * 1000);
-      const oneHourAgo = new Date(Date.now() - 1 * 60 * 60 * 1000);
-      await orchestrator.database.seed.createTimeEntry({
+      await orchestrator.database.seed.createCurrentWeekTimeEntry({
         user_id: gerente.id,
-        clocked_in_at: fiveHoursAgo.toISOString(),
-        clocked_out_at: oneHourAgo.toISOString(),
       });
 
       const response = await fetch(`${BASE_URL}/summary/me`, {
@@ -306,12 +298,8 @@ describe('GET /time-entries/summary/me', () => {
         role: 'diretor',
         sector: 'comercial',
       });
-      const fiveHoursAgo = new Date(Date.now() - 5 * 60 * 60 * 1000);
-      const oneHourAgo = new Date(Date.now() - 1 * 60 * 60 * 1000);
-      await orchestrator.database.seed.createTimeEntry({
+      await orchestrator.database.seed.createCurrentWeekTimeEntry({
         user_id: diretor.id,
-        clocked_in_at: fiveHoursAgo.toISOString(),
-        clocked_out_at: oneHourAgo.toISOString(),
       });
 
       const response = await fetch(`${BASE_URL}/summary/me`, {
@@ -412,12 +400,8 @@ describe('GET /time-entries/summary/me', () => {
         role: 'assessor',
         sector: 'comercial',
       });
-      const fiveHoursAgo = new Date(Date.now() - 5 * 60 * 60 * 1000);
-      const oneHourAgo = new Date(Date.now() - 1 * 60 * 60 * 1000);
-      await orchestrator.database.seed.createTimeEntry({
+      await orchestrator.database.seed.createCurrentWeekTimeEntry({
         user_id: assessor.id,
-        clocked_in_at: fiveHoursAgo.toISOString(),
-        clocked_out_at: oneHourAgo.toISOString(),
       });
 
       const response = await fetch(`${BASE_URL}/summary/me`, {
@@ -518,12 +502,8 @@ describe('GET /time-entries/summary/me', () => {
         role: 'presidente',
         sector: 'comercial',
       });
-      const fiveHoursAgo = new Date(Date.now() - 5 * 60 * 60 * 1000);
-      const oneHourAgo = new Date(Date.now() - 1 * 60 * 60 * 1000);
-      await orchestrator.database.seed.createTimeEntry({
+      await orchestrator.database.seed.createCurrentWeekTimeEntry({
         user_id: presidente.id,
-        clocked_in_at: fiveHoursAgo.toISOString(),
-        clocked_out_at: oneHourAgo.toISOString(),
       });
 
       const response = await fetch(`${BASE_URL}/summary/me`, {

@@ -62,6 +62,10 @@ async function waitForAllServices(): Promise<void> {
 
 async function clearDatabase(): Promise<void> {
   const p = getPool();
+  await p.query('DELETE FROM candidates');
+  await p.query('DELETE FROM selection_process_applications');
+  await p.query('DELETE FROM selection_process_stages');
+  await p.query('DELETE FROM selection_processes');
   await p.query('DELETE FROM gamification_submissions');
   await p.query('DELETE FROM gamification_tasks');
   await p.query('DELETE FROM gamification_cycles');
@@ -628,6 +632,67 @@ async function createSubmission({
   return rows[0];
 }
 
+export interface CreatedSelectionProcess {
+  id: string;
+  title: string;
+}
+
+async function createSelectionProcess({
+  title = 'Processo Seletivo Teste',
+}: {
+  title?: string;
+} = {}): Promise<CreatedSelectionProcess> {
+  const { rows } = await getPool().query<CreatedSelectionProcess>(
+    `INSERT INTO selection_processes (title, starts_at, ends_at)
+     VALUES ($1, clock_timestamp() - INTERVAL '1 second', clock_timestamp() + INTERVAL '30 days')
+     RETURNING id, title`,
+    [title],
+  );
+  return rows[0];
+}
+
+export interface CreatedProcessStage {
+  id: string;
+  selection_process_id: string;
+  name: string;
+  position: number;
+}
+
+async function createProcessStage({
+  selection_process_id,
+  name = 'Etapa',
+  position = 1,
+}: {
+  selection_process_id: string;
+  name?: string;
+  position?: number;
+}): Promise<CreatedProcessStage> {
+  const { rows } = await getPool().query<CreatedProcessStage>(
+    `INSERT INTO selection_process_stages (selection_process_id, name, position)
+     VALUES ($1, $2, $3)
+     RETURNING id, selection_process_id, name, position`,
+    [selection_process_id, name, position],
+  );
+  return rows[0];
+}
+
+async function createCurrentWeekTimeEntry({
+  user_id,
+}: {
+  user_id: string;
+}): Promise<CreatedTimeEntry> {
+  const { rows } = await getPool().query<CreatedTimeEntry>(
+    `INSERT INTO time_entries (user_id, clocked_in_at, clocked_out_at, is_valid)
+     VALUES ($1,
+       date_trunc('week', NOW()) + INTERVAL '4 hours',
+       date_trunc('week', NOW()) + INTERVAL '8 hours',
+       true)
+     RETURNING id, user_id`,
+    [user_id],
+  );
+  return rows[0];
+}
+
 async function uploadGamificationFile(
   userId: string,
   filename: string,
@@ -676,6 +741,49 @@ async function uploadFile(userId: string, filename: string): Promise<string> {
   return filePath;
 }
 
+export interface SelectionProcessFilePaths {
+  resumePath: string;
+  transcriptPath: string;
+  photoPath: string;
+}
+
+async function uploadSelectionProcessFiles(
+  folderUuid: string,
+): Promise<SelectionProcessFilePaths> {
+  const bucket = 'selection-process-files';
+  const sb = getSupabase();
+
+  const files = [
+    { key: 'resume', name: 'resume.pdf', content: 'curriculo de teste' },
+    {
+      key: 'transcript',
+      name: 'transcript.pdf',
+      content: 'historico de teste',
+    },
+    { key: 'photo', name: 'photo.jpg', content: 'foto de teste' },
+  ] as const;
+
+  const paths: Record<string, string> = {};
+  for (const f of files) {
+    const filePath = `${folderUuid}/${f.name}`;
+    const { error } = await sb.storage
+      .from(bucket)
+      .upload(filePath, Buffer.from(f.content), {
+        upsert: true,
+        contentType: 'text/plain',
+      });
+    if (error)
+      throw new Error(`Storage upload failed (${f.name}): ${error.message}`);
+    paths[`${f.key}Path`] = filePath;
+  }
+
+  return {
+    resumePath: paths['resumePath'],
+    transcriptPath: paths['transcriptPath'],
+    photoPath: paths['photoPath'],
+  };
+}
+
 async function deleteAllEmails() {
   await fetch(`${emailHttpUrl}/messages`, {
     method: 'DELETE',
@@ -717,6 +825,7 @@ export default {
       createTimeEntry,
       createReimbursement,
       uploadFile,
+      uploadSelectionProcessFiles,
       createPortfolioItem,
       createLead,
       createLeadContact,
@@ -730,6 +839,9 @@ export default {
       createGamTask,
       createSubmission,
       uploadGamificationFile,
+      createSelectionProcess,
+      createProcessStage,
+      createCurrentWeekTimeEntry,
     },
   },
   email: {

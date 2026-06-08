@@ -69,7 +69,12 @@ export interface TaskResponse {
 // ─── Submissions ─────────────────────────────────────────────────────────────
 
 export const createSubmissionSchema = z.object({
-  task_id: z.string().uuid(),
+  task_id: z
+    .string()
+    .regex(
+      /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/i,
+      'Invalid UUID',
+    ),
   description: z.string().min(1),
   file_path: z.string().min(1),
 });
