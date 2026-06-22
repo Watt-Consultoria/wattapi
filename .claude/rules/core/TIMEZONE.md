@@ -24,7 +24,7 @@ Why: `TIMESTAMPTZ` converts to UTC on insert and converts back on read. If a con
 ```sql
 -- CORRECT — TIMESTAMPTZ is the safe default
 CREATE TABLE events (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   starts_at TIMESTAMPTZ NOT NULL,
   ends_at TIMESTAMPTZ NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -68,7 +68,7 @@ ENV TZ=UTC
 # Kubernetes pod spec
 env:
   - name: TZ
-    value: "UTC"
+    value: 'UTC'
 ```
 
 ---
@@ -91,6 +91,7 @@ val now: LocalDateTime = LocalDateTime.now()  // What timezone? Nobody knows.
 ### `ZonedDateTime` — Only at Computation Boundaries
 
 Never put `ZonedDateTime` in entities, DTOs, or API payloads. It's OK for:
+
 - Scheduling logic (computing "next 9 AM in user's timezone")
 - DST-aware date arithmetic ("add 1 day" at DST boundary)
 - Generating reports in a specific timezone
@@ -182,7 +183,7 @@ function formatDate(utcString: string): string {
   return new Intl.DateTimeFormat(undefined, {
     dateStyle: 'medium',
     timeStyle: 'short',
-  }).format(new Date(utcString))
+  }).format(new Date(utcString));
 }
 ```
 
@@ -190,13 +191,13 @@ function formatDate(utcString: string): string {
 
 ```typescript
 // Convert local input to UTC before API call
-const localDate = new Date(userInput)
-const utcString = localDate.toISOString()  // "2024-01-20T02:00:00.000Z"
+const localDate = new Date(userInput);
+const utcString = localDate.toISOString(); // "2024-01-20T02:00:00.000Z"
 
-await api.post('/events', { startsAt: utcString })
+await api.post('/events', { startsAt: utcString });
 
 // WRONG — no Z suffix, ambiguous
-await api.post('/events', { startsAt: '2024-01-20T09:00:00' })
+await api.post('/events', { startsAt: '2024-01-20T09:00:00' });
 ```
 
 ### Use Browser Timezone at Render Time
@@ -205,10 +206,10 @@ Don't track the user's timezone in frontend state. The browser already knows it.
 
 ```typescript
 // CORRECT — use at render time
-const userTz = Intl.DateTimeFormat().resolvedOptions().timeZone
+const userTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 // WRONG — storing timezone in state
-const [timezone, setTimezone] = useState('America/New_York')
+const [timezone, setTimezone] = useState('America/New_York');
 ```
 
 ---
@@ -224,7 +225,7 @@ There are cases where storing a user's IANA timezone is correct. The rule is:
 ```sql
 -- CORRECT — timezone as a user preference, not part of timestamps
 CREATE TABLE user_preferences (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL,
   timezone TEXT NOT NULL DEFAULT 'UTC',          -- IANA timezone: 'America/New_York'
   notification_time TEXT NOT NULL DEFAULT '09:00', -- local time, not a timestamp
@@ -290,17 +291,17 @@ Governments change DST rules. Your JVM and OS timezone databases need updating. 
 
 ## Quick Reference
 
-| Layer | Type | Format | Example |
-|-------|------|--------|---------|
-| Database | Column type | `TIMESTAMPTZ` | `2024-01-15 10:30:00+00` |
-| Backend (Kotlin) | Property type | `Instant` | `Instant.now()` |
-| API JSON | String | ISO 8601 + Z | `"2024-01-15T10:30:00Z"` |
-| Frontend (receive) | Parse | `new Date(utcString)` | `new Date("2024-01-15T10:30:00Z")` |
-| Frontend (display) | Format | `Intl.DateTimeFormat` | `"Jan 15, 2024, 5:30 PM"` |
-| Frontend (send) | Serialize | `toISOString()` | `"2024-01-15T10:30:00.000Z"` |
-| Events (Kafka) | Type | epoch millis | `1705312200000` |
-| Cron jobs | Zone | IANA or UTC | `zone = "UTC"` |
-| User preference | Column | IANA timezone | `America/New_York` |
+| Layer              | Type          | Format                | Example                            |
+| ------------------ | ------------- | --------------------- | ---------------------------------- |
+| Database           | Column type   | `TIMESTAMPTZ`         | `2024-01-15 10:30:00+00`           |
+| Backend (Kotlin)   | Property type | `Instant`             | `Instant.now()`                    |
+| API JSON           | String        | ISO 8601 + Z          | `"2024-01-15T10:30:00Z"`           |
+| Frontend (receive) | Parse         | `new Date(utcString)` | `new Date("2024-01-15T10:30:00Z")` |
+| Frontend (display) | Format        | `Intl.DateTimeFormat` | `"Jan 15, 2024, 5:30 PM"`          |
+| Frontend (send)    | Serialize     | `toISOString()`       | `"2024-01-15T10:30:00.000Z"`       |
+| Events (Kafka)     | Type          | epoch millis          | `1705312200000`                    |
+| Cron jobs          | Zone          | IANA or UTC           | `zone = "UTC"`                     |
+| User preference    | Column        | IANA timezone         | `America/New_York`                 |
 
 ## What NOT to Do
 

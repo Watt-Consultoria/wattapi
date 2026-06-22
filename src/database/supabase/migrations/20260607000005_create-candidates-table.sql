@@ -1,7 +1,7 @@
 CREATE TYPE candidate_status AS ENUM ('active', 'eliminated', 'approved');
 
 CREATE TABLE candidates (
-  id                   UUID             PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id                   UUID             PRIMARY KEY DEFAULT gen_random_uuid(),
   application_id       UUID             NOT NULL UNIQUE REFERENCES selection_process_applications(id),
   selection_process_id UUID             NOT NULL REFERENCES selection_processes(id),
   current_stage_id     UUID             NOT NULL REFERENCES selection_process_stages(id),
