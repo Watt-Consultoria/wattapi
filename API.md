@@ -2848,3 +2848,52 @@ Retorna as avaliações de entrevistas. Filtrável por processo seletivo.
 ```
 
 **Resposta 401** — Sem token
+
+---
+
+### `POST /selection-process/send-email`
+
+Envia um email personalizado (HTML + texto plano) para um conjunto de candidatos e retorna o resultado agregado de envios.
+
+**Auth:** `assessor` ou `presidente`
+
+**Body**
+
+```json
+{
+  "candidate_ids": ["uuid-1", "uuid-2"],
+  "subject": "Comunicado do processo seletivo",
+  "html": "<p>Olá, candidato!</p>",
+  "plain_text": "Olá, candidato!"
+}
+```
+
+**Campos:**
+
+| Campo           | Tipo     | Obrigatório | Descrição                                |
+| --------------- | -------- | ----------- | ---------------------------------------- |
+| `candidate_ids` | `UUID[]` | Sim         | Array de IDs de candidatos (mínimo 1)    |
+| `subject`       | `string` | Sim         | Assunto do email                         |
+| `html`          | `string` | Sim         | Corpo do email em HTML                   |
+| `plain_text`    | `string` | Sim         | Corpo do email em texto plano (fallback) |
+
+**Comportamento:**
+
+1. Valida todos os `candidate_ids` — retorna 404 se qualquer ID não existir (sem enviar nenhum email)
+2. Busca o email de cada candidato pelo ID
+3. Envia todos os emails em paralelo (`Promise.allSettled`)
+4. Retorna o total de envios bem-sucedidos e com erro
+
+**Resposta 200**
+
+```json
+{ "successes": 2, "errors": 0 }
+```
+
+**Resposta 400** — Body inválido (campos faltando, `candidate_ids` vazio)
+
+**Resposta 401** — Sem token
+
+**Resposta 403** — Role insuficiente (ex: consultor, gerente)
+
+**Resposta 404** — Algum `candidate_id` não existe

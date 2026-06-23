@@ -54,6 +54,8 @@ import type {
   InterviewEvaluationWithCandidateResponse,
   MySlotResponse,
   SendLinksResult,
+  SendEmailToCandidatesDto,
+  SendEmailResult,
 } from './dto/selection-process.dto';
 
 const BUCKET = 'selection-process-files';
@@ -972,6 +974,35 @@ export class SelectionProcessService {
     }
 
     return results;
+  }
+
+  async sendEmailToCandidates(
+    dto: SendEmailToCandidatesDto,
+  ): Promise<SendEmailResult> {
+    const { rows: candidates } = await this.db.query<{
+      id: string;
+      email: string;
+    }>(`SELECT id, email FROM candidates WHERE id = ANY($1::uuid[])`, [
+      dto.candidate_ids,
+    ]);
+
+    if (candidates.length !== dto.candidate_ids.length) {
+      throw new NotFoundException('One or more candidate IDs not found');
+    }
+
+    const results = await Promise.allSettled(
+      candidates.map((c) =>
+        this.emailService.send({
+          to: c.email,
+          subject: dto.subject,
+          html: dto.html,
+          text: dto.plain_text,
+        }),
+      ),
+    );
+
+    const successes = results.filter((r) => r.status === 'fulfilled').length;
+    return { successes, errors: results.length - successes };
   }
 
   // ─── Interview finalization ───────────────────────────────────────────────

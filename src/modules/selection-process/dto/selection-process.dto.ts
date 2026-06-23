@@ -376,6 +376,22 @@ export interface SendLinksResult {
   success: boolean;
 }
 
+export const sendEmailToCandidatesSchema = z.object({
+  candidate_ids: z.array(z.string().regex(UUID_REGEX)).min(1),
+  subject: z.string().min(1),
+  html: z.string().min(1),
+  plain_text: z.string().min(1),
+});
+
+export type SendEmailToCandidatesDto = z.infer<
+  typeof sendEmailToCandidatesSchema
+>;
+
+export interface SendEmailResult {
+  successes: number;
+  errors: number;
+}
+
 export interface CandidateResponse {
   id: string;
   application_id: string;
