@@ -27,8 +27,9 @@
     "services:migration:create": "supabase migration new --workdir ./src/database/",
     "services:migration:up": "supabase migration up --workdir ./src/database/",
     "services:mailcatcher:start": "docker compose -f ./src/test/compose.yaml up -d",
-    "services:up": "npm run services:mailcatcher:start && npm run services:db:start",
-    "services:edge:start": "supabase functions serve --workdir ./src/database/",
+    "services:up": "npm run services:mailcatcher:start && npm run services:db:start && npm run services:edge:start",
+    "services:edge:start": "powershell -Command \"Start-Process -NoNewWindow cmd -ArgumentList '/c','npm','run','services:edge:serve'\"",
+    "services:edge:serve": "supabase functions serve --no-verify-jwt --workdir ./src/database/",
     "wait:api": "node ./src/common/scripts/wait-for-api.mjs"
   },
   "dependencies": {

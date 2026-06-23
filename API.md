@@ -669,6 +669,84 @@ Cria notificações dirigidas para um grupo de usuários. Exclusivo para superus
 
 ---
 
+## Push Subscriptions
+
+Gerenciamento de subscrições Web Push por dispositivo. Permite que a PWA registre e remova subscrições associadas ao usuário autenticado, e exponha a chave pública VAPID necessária para o registro no `PushManager`.
+
+---
+
+### `GET /push-subscriptions/vapid-public-key`
+
+Retorna a chave pública VAPID necessária para a PWA registrar a subscrição no browser via `PushManager.subscribe()`.
+
+**Autenticação:** Não obrigatória (endpoint público)
+
+**Resposta 200**
+
+```json
+{ "vapid_public_key": "BLjCDzqsWtu..." }
+```
+
+---
+
+### `POST /push-subscriptions`
+
+Registra a subscrição Web Push do dispositivo atual para o usuário autenticado.
+
+**Autenticação:** Obrigatória
+
+**Body**
+
+```json
+{
+  "endpoint": "https://fcm.googleapis.com/fcm/send/...",
+  "p256dh": "BNcRdreALRFXTkOOUHK1EtK2wtwe6YNE5vIVrDML",
+  "auth": "tBHItJI5svbpez7KI4CCXg"
+}
+```
+
+| Campo      | Tipo   | Obrigatório | Descrição                                   |
+| ---------- | ------ | ----------- | ------------------------------------------- |
+| `endpoint` | string | sim         | URL do push service do browser              |
+| `p256dh`   | string | sim         | Chave pública do cliente (base64url)        |
+| `auth`     | string | sim         | Segredo de autenticação do cliente (base64) |
+
+**Resposta 201**
+
+```json
+{ "id": "uuid" }
+```
+
+**Resposta 400** — Campos obrigatórios ausentes
+
+**Resposta 401** — Token ausente ou inválido
+
+**Resposta 409** — Endpoint já registrado e ativo para este usuário
+
+---
+
+### `DELETE /push-subscriptions/:id`
+
+Remove (soft delete) uma subscrição de push. Apenas o dono pode remover.
+
+**Autenticação:** Obrigatória
+
+**Parâmetros de path**
+
+| Parâmetro | Tipo | Descrição              |
+| --------- | ---- | ---------------------- |
+| `id`      | UUID | ID da subscrição       |
+
+**Resposta 204** — Subscrição removida
+
+**Resposta 401** — Token ausente ou inválido
+
+**Resposta 403** — Usuário não é o dono da subscrição
+
+**Resposta 404** — Subscrição não encontrada ou já removida
+
+---
+
 ## Status
 
 ### `GET /status`

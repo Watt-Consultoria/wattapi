@@ -62,6 +62,7 @@ async function waitForAllServices(): Promise<void> {
 
 async function clearDatabase(): Promise<void> {
   const p = getPool();
+  await p.query('DELETE FROM push_subscriptions');
   await p.query('DELETE FROM psel_interview_evaluations');
   await p.query('DELETE FROM psel_interview_slots');
   await p.query('DELETE FROM psel_interview_tokens');
