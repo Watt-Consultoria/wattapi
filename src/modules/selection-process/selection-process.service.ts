@@ -1,12 +1,20 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
+import { randomBytes } from 'crypto';
 import { PoolClient } from 'pg';
 import { DatabaseService } from '../../database/database.service';
 import { EmailService } from '../email/email.service';
+import { EnvService } from '../../config/env.service';
+import { interviewBookingLinkEmail } from '../../common/email/InterviewBookingLinkEmail';
+import { interviewConfirmationEmail } from '../../common/email/InterviewConfirmationEmail';
+import { interviewConsultantEmail } from '../../common/email/InterviewConsultantEmail';
+import { interviewMeetLinkEmail } from '../../common/email/InterviewMeetLinkEmail';
 import { applicationConfirmationEmail } from '../../common/email/ApplicationConfirmationEmail';
 import { applicationApprovalEmail } from '../../common/email/ApplicationApprovalEmail';
 import { applicationRejectionEmail } from '../../common/email/ApplicationRejectionEmail';
@@ -30,6 +38,22 @@ import type {
   ApplicationCreatedResponse,
   StageResponse,
   CandidateResponse,
+  CreateInterviewSlotsDto,
+  BookInterviewSlotDto,
+  SendInterviewLinksDto,
+  SendMeetLinkDto,
+  CreateInterviewEvaluationDto,
+  InterviewSlotRow,
+  InterviewBookingRow,
+  InterviewTokenRow,
+  InterviewEvaluationRow,
+  InterviewSlotResponse,
+  AvailableTimeSlotResponse,
+  InterviewBookingResponse,
+  InterviewEvaluationResponse,
+  InterviewEvaluationWithCandidateResponse,
+  MySlotResponse,
+  SendLinksResult,
 } from './dto/selection-process.dto';
 
 const BUCKET = 'selection-process-files';
@@ -48,6 +72,7 @@ export class SelectionProcessService {
   constructor(
     private readonly db: DatabaseService,
     private readonly emailService: EmailService,
+    private readonly env: EnvService,
   ) {}
 
   // ─── Processes ────────────────────────────────────────────────────────────
@@ -635,6 +660,488 @@ export class SelectionProcessService {
     return this.toCandidateResponse(updated[0]);
   }
 
+  // ─── Interviews ───────────────────────────────────────────────────────────
+
+  async createInterviewSlots(
+    consultantId: string,
+    dto: CreateInterviewSlotsDto,
+  ): Promise<InterviewSlotResponse[]> {
+    const process = await this.findActive();
+    if (!process)
+      throw new NotFoundException('No active selection process found');
+
+    const BRT_OFFSET = -3;
+
+    for (const startsAtStr of dto.slots) {
+      const startsAt = new Date(startsAtStr);
+
+      if (startsAt <= new Date()) {
+        throw new BadRequestException(
+          `Slot ${startsAtStr} must be in the future`,
+        );
+      }
+
+      if (startsAt.getUTCMinutes() !== 0 || startsAt.getUTCSeconds() !== 0) {
+        throw new BadRequestException(
+          `Slot ${startsAtStr} must be at a full hour`,
+        );
+      }
+
+      const brtHour = (((startsAt.getUTCHours() + BRT_OFFSET) % 24) + 24) % 24;
+      if (brtHour < 8 || brtHour > 19) {
+        throw new BadRequestException(
+          `Slot ${startsAtStr} must be between 08h and 19h BRT`,
+        );
+      }
+    }
+
+    const results: InterviewSlotRow[] = [];
+    for (const startsAtStr of dto.slots) {
+      const startsAt = new Date(startsAtStr);
+      const endsAt = new Date(startsAt.getTime() + 60 * 60 * 1000);
+
+      const { rows } = await this.db.query<InterviewSlotRow>(
+        `INSERT INTO psel_interview_slots (selection_process_id, consultant_id, starts_at, ends_at)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (consultant_id, starts_at) DO NOTHING
+         RETURNING *`,
+        [
+          process.id,
+          consultantId,
+          startsAt.toISOString(),
+          endsAt.toISOString(),
+        ],
+      );
+      if (rows.length > 0) results.push(rows[0]);
+    }
+
+    return results.map((r) => this.toInterviewSlotResponse(r));
+  }
+
+  async findAvailableTimeSlots(): Promise<AvailableTimeSlotResponse[]> {
+    const process = await this.findActive();
+    if (!process) return [];
+
+    const { rows } = await this.db.query<{ starts_at: Date; ends_at: Date }>(
+      `SELECT starts_at, MAX(ends_at) AS ends_at
+       FROM psel_interview_slots
+       WHERE selection_process_id = $1
+       GROUP BY starts_at
+       HAVING COUNT(*) FILTER (WHERE booking_id IS NULL) >= 2
+       ORDER BY starts_at ASC`,
+      [process.id],
+    );
+
+    return rows.map((r) => ({
+      starts_at: r.starts_at.toISOString(),
+      ends_at: r.ends_at.toISOString(),
+    }));
+  }
+
+  async bookInterviewSlot(
+    dto: BookInterviewSlotDto,
+  ): Promise<InterviewBookingResponse> {
+    const { rows: tokenRows } = await this.db.query<InterviewTokenRow>(
+      `SELECT * FROM psel_interview_tokens
+       WHERE token = $1 AND expires_at > NOW()`,
+      [dto.token],
+    );
+    if (tokenRows.length === 0) {
+      throw new UnauthorizedException('Invalid or expired token');
+    }
+
+    const { candidate_id: candidateId } = tokenRows[0];
+
+    const { rows: existingBookings } = await this.db.query<{ id: string }>(
+      `SELECT id FROM psel_interview_bookings WHERE candidate_id = $1`,
+      [candidateId],
+    );
+    if (existingBookings.length > 0) {
+      throw new ConflictException(
+        'Candidate already has an interview scheduled',
+      );
+    }
+
+    const { rows: candidateRows } = await this.db.query<{
+      email: string;
+      name: string;
+    }>(`SELECT email, name FROM candidates WHERE id = $1`, [candidateId]);
+
+    const { booking, consultantIds } = await this.db.withTransaction(
+      async (client: PoolClient) => {
+        const { rows: slots } = await client.query<{
+          id: string;
+          selection_process_id: string;
+          ends_at: Date;
+          consultant_id: string;
+        }>(
+          `SELECT id, selection_process_id, ends_at, consultant_id
+           FROM psel_interview_slots
+           WHERE starts_at = $1 AND booking_id IS NULL
+           FOR UPDATE`,
+          [dto.starts_at],
+        );
+
+        if (slots.length < 2) {
+          throw new ConflictException('Slot is no longer available');
+        }
+
+        const selected = [...slots].sort(() => Math.random() - 0.5).slice(0, 2);
+
+        const { rows: bookingRows } = await client.query<InterviewBookingRow>(
+          `INSERT INTO psel_interview_bookings
+             (selection_process_id, candidate_id, starts_at, ends_at)
+           VALUES ($1, $2, $3, $4)
+           RETURNING *`,
+          [
+            slots[0].selection_process_id,
+            candidateId,
+            dto.starts_at,
+            slots[0].ends_at.toISOString(),
+          ],
+        );
+
+        await client.query(
+          `UPDATE psel_interview_slots SET booking_id = $1
+           WHERE id = ANY($2::uuid[])`,
+          [bookingRows[0].id, selected.map((s) => s.id)],
+        );
+
+        return {
+          booking: bookingRows[0],
+          consultantIds: selected.map((s) => s.consultant_id),
+        };
+      },
+    );
+
+    const startsAt = new Date(dto.starts_at);
+    const endsAt = new Date(startsAt.getTime() + 60 * 60 * 1000);
+    const BRT_OFFSET = -3;
+    const brtStartHour =
+      (((startsAt.getUTCHours() + BRT_OFFSET) % 24) + 24) % 24;
+    const brtEndHour = (((endsAt.getUTCHours() + BRT_OFFSET) % 24) + 24) % 24;
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const interviewDate = `${startsAt.getUTCDate().toString().padStart(2, '0')}/${(startsAt.getUTCMonth() + 1).toString().padStart(2, '0')}/${startsAt.getUTCFullYear()}`;
+    const startTimeStr = `${pad(brtStartHour)}:00`;
+    const endTimeStr = `${pad(brtEndHour)}:00`;
+
+    if (candidateRows.length > 0) {
+      const candidate = candidateRows[0];
+      this.emailService
+        .send({
+          to: candidate.email,
+          ...interviewConfirmationEmail({
+            candidateName: candidate.name,
+            interviewDate,
+            interviewStartTime: startTimeStr,
+            interviewEndTime: endTimeStr,
+          }),
+        })
+        .catch(() => {});
+    }
+
+    const { rows: consultantRows } = await this.db.query<{
+      id: string;
+      email: string;
+      name: string;
+    }>(`SELECT id, email, name FROM users WHERE id = ANY($1::uuid[])`, [
+      consultantIds,
+    ]);
+
+    const candidateName =
+      candidateRows.length > 0 ? candidateRows[0].name : 'Candidato';
+
+    for (const consultant of consultantRows) {
+      this.emailService
+        .send({
+          to: consultant.email,
+          ...interviewConsultantEmail({
+            consultantName: consultant.name,
+            candidateName,
+            interviewDate,
+            interviewStartTime: startTimeStr,
+            interviewEndTime: endTimeStr,
+          }),
+        })
+        .catch(() => {});
+
+      this.db
+        .query(
+          `INSERT INTO notifications (user_id, title, description, origin)
+           VALUES ($1, $2, $3, 'automatic')`,
+          [
+            consultant.id,
+            'Nova entrevista agendada',
+            `${candidateName} agendou uma entrevista com você para ${interviewDate} às ${startTimeStr} (BRT).`,
+          ],
+        )
+        .catch(() => {});
+    }
+
+    return this.toInterviewBookingResponse(booking);
+  }
+
+  async getMySlots(
+    userId: string,
+    userRole: string,
+  ): Promise<MySlotResponse[]> {
+    const isSuperuser = userRole === 'assessor' || userRole === 'presidente';
+
+    type SlotJoinRow = InterviewSlotRow & {
+      consultant_name: string | null;
+      candidate_name: string | null;
+      candidate_email: string | null;
+    };
+
+    let rows: SlotJoinRow[];
+
+    if (isSuperuser) {
+      const result = await this.db.query<SlotJoinRow>(
+        `SELECT s.*, u.name AS consultant_name,
+                c.name AS candidate_name, c.email AS candidate_email
+         FROM psel_interview_slots s
+         JOIN users u ON s.consultant_id = u.id
+         LEFT JOIN psel_interview_bookings b ON s.booking_id = b.id
+         LEFT JOIN candidates c ON b.candidate_id = c.id
+         ORDER BY s.starts_at ASC`,
+      );
+      rows = result.rows;
+    } else {
+      const result = await this.db.query<SlotJoinRow>(
+        `SELECT s.*, NULL::text AS consultant_name,
+                c.name AS candidate_name, c.email AS candidate_email
+         FROM psel_interview_slots s
+         LEFT JOIN psel_interview_bookings b ON s.booking_id = b.id
+         LEFT JOIN candidates c ON b.candidate_id = c.id
+         WHERE s.consultant_id = $1
+         ORDER BY s.starts_at ASC`,
+        [userId],
+      );
+      rows = result.rows;
+    }
+
+    return rows.map((r) => this.toMySlotResponse(r, isSuperuser));
+  }
+
+  async sendInterviewLinks(
+    dto: SendInterviewLinksDto,
+  ): Promise<SendLinksResult[]> {
+    const process = await this.findActive();
+    if (!process)
+      throw new NotFoundException('No active selection process found');
+
+    const results: SendLinksResult[] = [];
+
+    for (const candidateId of dto.candidate_ids) {
+      const { rows: candidateRows } = await this.db.query<{
+        id: string;
+        email: string;
+        name: string;
+      }>(`SELECT id, email, name FROM candidates WHERE id = $1`, [candidateId]);
+      if (candidateRows.length === 0) {
+        throw new NotFoundException(`Candidate ${candidateId} not found`);
+      }
+
+      const candidate = candidateRows[0];
+      const token = randomBytes(32).toString('hex');
+
+      await this.db.query(
+        `INSERT INTO psel_interview_tokens (candidate_id, token, expires_at)
+         VALUES ($1, $2, $3)`,
+        [candidateId, token, process.ends_at.toISOString()],
+      );
+
+      const frontendUrl = this.env.get('FRONTEND_URL');
+      const bookingUrl = `${frontendUrl}/psel/entrevistas/${token}`;
+
+      let success = true;
+      try {
+        await this.emailService.send({
+          to: candidate.email,
+          ...interviewBookingLinkEmail({
+            candidateName: candidate.name,
+            bookingUrl,
+          }),
+        });
+      } catch {
+        success = false;
+      }
+
+      results.push({ candidate_id: candidateId, success });
+    }
+
+    return results;
+  }
+
+  // ─── Interview finalization ───────────────────────────────────────────────
+
+  private async assertConsultantLinked(
+    bookingId: string,
+    consultantId: string,
+  ): Promise<void> {
+    const { rows } = await this.db.query<{ id: string }>(
+      `SELECT id FROM psel_interview_slots
+       WHERE booking_id = $1 AND consultant_id = $2`,
+      [bookingId, consultantId],
+    );
+    if (rows.length === 0) {
+      throw new ForbiddenException(
+        'You are not a consultant for this interview',
+      );
+    }
+  }
+
+  async sendMeetLink(
+    dto: SendMeetLinkDto,
+    consultantId: string,
+  ): Promise<InterviewBookingResponse> {
+    const { rows: bookingRows } = await this.db.query<InterviewBookingRow>(
+      `SELECT * FROM psel_interview_bookings WHERE id = $1`,
+      [dto.booking_id],
+    );
+    if (bookingRows.length === 0) {
+      throw new NotFoundException(`Booking ${dto.booking_id} not found`);
+    }
+
+    await this.assertConsultantLinked(dto.booking_id, consultantId);
+
+    const booking = bookingRows[0];
+    if (booking.meet_link) {
+      throw new ConflictException(
+        'A meet link has already been sent for this interview',
+      );
+    }
+
+    const { rows: updated } = await this.db.query<InterviewBookingRow>(
+      `UPDATE psel_interview_bookings SET meet_link = $1 WHERE id = $2 RETURNING *`,
+      [dto.meet_link, dto.booking_id],
+    );
+
+    const { rows: candidateRows } = await this.db.query<{
+      email: string;
+      name: string;
+    }>(`SELECT email, name FROM candidates WHERE id = $1`, [
+      booking.candidate_id,
+    ]);
+
+    if (candidateRows.length > 0) {
+      this.emailService
+        .send({
+          to: candidateRows[0].email,
+          ...interviewMeetLinkEmail({
+            candidateName: candidateRows[0].name,
+            meetLink: dto.meet_link,
+          }),
+        })
+        .catch(() => {});
+    }
+
+    return this.toInterviewBookingResponse(updated[0]);
+  }
+
+  async createInterviewEvaluation(
+    bookingId: string,
+    dto: CreateInterviewEvaluationDto,
+    evaluatorId: string,
+  ): Promise<InterviewEvaluationResponse> {
+    const { rows: bookingRows } = await this.db.query<{
+      id: string;
+      starts_at: Date;
+    }>(`SELECT id, starts_at FROM psel_interview_bookings WHERE id = $1`, [
+      bookingId,
+    ]);
+    if (bookingRows.length === 0) {
+      throw new NotFoundException(`Booking ${bookingId} not found`);
+    }
+
+    if (new Date() < bookingRows[0].starts_at) {
+      throw new BadRequestException(
+        'Evaluation can only be submitted after the interview has started',
+      );
+    }
+
+    await this.assertConsultantLinked(bookingId, evaluatorId);
+
+    const { rows: existing } = await this.db.query<{ id: string }>(
+      `SELECT id FROM psel_interview_evaluations WHERE booking_id = $1`,
+      [bookingId],
+    );
+    if (existing.length > 0) {
+      throw new ConflictException(
+        'An evaluation already exists for this interview',
+      );
+    }
+
+    const { rows } = await this.db.query<InterviewEvaluationRow>(
+      `INSERT INTO psel_interview_evaluations
+         (booking_id, evaluator_id,
+          proatividade, lideranca, transparencia, uniao_de_time,
+          comunicacao, seriedade, compromisso, proposito,
+          autoresponsabilidade, autoconfianca, responsabilidade_social, criatividade,
+          procrastinacao, desinteresse, falta_de_transparencia,
+          proposito_vago, vitimizacao, falta_de_confianca,
+          observacoes)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)
+       RETURNING *`,
+      [
+        bookingId,
+        evaluatorId,
+        dto.proatividade,
+        dto.lideranca,
+        dto.transparencia,
+        dto.uniao_de_time,
+        dto.comunicacao,
+        dto.seriedade,
+        dto.compromisso,
+        dto.proposito,
+        dto.autoresponsabilidade,
+        dto.autoconfianca,
+        dto.responsabilidade_social,
+        dto.criatividade,
+        dto.procrastinacao,
+        dto.desinteresse,
+        dto.falta_de_transparencia,
+        dto.proposito_vago,
+        dto.vitimizacao,
+        dto.falta_de_confianca,
+        dto.observacoes ?? null,
+      ],
+    );
+
+    return this.toInterviewEvaluationResponse(rows[0]);
+  }
+
+  async findInterviewEvaluations(
+    selectionProcessId?: string,
+  ): Promise<InterviewEvaluationWithCandidateResponse[]> {
+    type EvaluationWithCandidate = InterviewEvaluationRow & {
+      candidate_id: string;
+      candidate_name: string;
+    };
+
+    const sql = selectionProcessId
+      ? `SELECT e.*, c.id AS candidate_id, c.name AS candidate_name
+         FROM psel_interview_evaluations e
+         JOIN psel_interview_bookings b ON b.id = e.booking_id
+         JOIN candidates c ON c.id = b.candidate_id
+         WHERE b.selection_process_id = $1
+         ORDER BY e.created_at DESC`
+      : `SELECT e.*, c.id AS candidate_id, c.name AS candidate_name
+         FROM psel_interview_evaluations e
+         JOIN psel_interview_bookings b ON b.id = e.booking_id
+         JOIN candidates c ON c.id = b.candidate_id
+         ORDER BY e.created_at DESC`;
+
+    const params = selectionProcessId ? [selectionProcessId] : [];
+    const { rows } = await this.db.query<EvaluationWithCandidate>(sql, params);
+
+    return rows.map((row) => ({
+      ...this.toInterviewEvaluationResponse(row),
+      candidate_id: row.candidate_id,
+      candidate_name: row.candidate_name,
+    }));
+  }
+
   // ─── Helpers ──────────────────────────────────────────────────────────────
 
   private async validateFileExists(path: string, label: string): Promise<void> {
@@ -729,5 +1236,89 @@ export class SelectionProcessService {
       position: row.position,
       created_at: row.created_at.toISOString(),
     };
+  }
+
+  private toInterviewSlotResponse(
+    row: InterviewSlotRow,
+  ): InterviewSlotResponse {
+    return {
+      id: row.id,
+      selection_process_id: row.selection_process_id,
+      consultant_id: row.consultant_id,
+      starts_at: row.starts_at.toISOString(),
+      ends_at: row.ends_at.toISOString(),
+      booking_id: row.booking_id,
+      created_at: row.created_at.toISOString(),
+    };
+  }
+
+  private toInterviewBookingResponse(
+    row: InterviewBookingRow,
+  ): InterviewBookingResponse {
+    return {
+      id: row.id,
+      selection_process_id: row.selection_process_id,
+      candidate_id: row.candidate_id,
+      starts_at: row.starts_at.toISOString(),
+      ends_at: row.ends_at.toISOString(),
+      booked_at: row.booked_at.toISOString(),
+      meet_link: row.meet_link,
+      created_at: row.created_at.toISOString(),
+    };
+  }
+
+  private toInterviewEvaluationResponse(
+    row: InterviewEvaluationRow,
+  ): InterviewEvaluationResponse {
+    return {
+      id: row.id,
+      booking_id: row.booking_id,
+      evaluator_id: row.evaluator_id,
+      proatividade: row.proatividade,
+      lideranca: row.lideranca,
+      transparencia: row.transparencia,
+      uniao_de_time: row.uniao_de_time,
+      comunicacao: row.comunicacao,
+      seriedade: row.seriedade,
+      compromisso: row.compromisso,
+      proposito: row.proposito,
+      autoresponsabilidade: row.autoresponsabilidade,
+      autoconfianca: row.autoconfianca,
+      responsabilidade_social: row.responsabilidade_social,
+      criatividade: row.criatividade,
+      procrastinacao: row.procrastinacao,
+      desinteresse: row.desinteresse,
+      falta_de_transparencia: row.falta_de_transparencia,
+      proposito_vago: row.proposito_vago,
+      vitimizacao: row.vitimizacao,
+      falta_de_confianca: row.falta_de_confianca,
+      observacoes: row.observacoes,
+      created_at: row.created_at.toISOString(),
+    };
+  }
+
+  private toMySlotResponse(
+    row: InterviewSlotRow & {
+      consultant_name: string | null;
+      candidate_name: string | null;
+      candidate_email: string | null;
+    },
+    isSuperuser: boolean,
+  ): MySlotResponse {
+    const base: MySlotResponse = {
+      id: row.id,
+      selection_process_id: row.selection_process_id,
+      consultant_id: row.consultant_id,
+      starts_at: row.starts_at.toISOString(),
+      ends_at: row.ends_at.toISOString(),
+      booking_id: row.booking_id,
+      created_at: row.created_at.toISOString(),
+      candidate_name: row.candidate_name,
+      candidate_email: row.candidate_email,
+    };
+    if (isSuperuser) {
+      base.consultant_name = row.consultant_name ?? undefined;
+    }
+    return base;
   }
 }

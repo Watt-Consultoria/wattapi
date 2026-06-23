@@ -208,10 +208,10 @@ Atualiza as configurações globais da aplicação.
 }
 ```
 
-| Campo                    | Tipo                   | Descrição                                                                                         |
-| ------------------------ | ---------------------- | ------------------------------------------------------------------------------------------------- |
-| `min_week_hours`         | inteiro positivo       | Mínimo de horas semanais exigidas no registro de horas                                            |
-| `min_availability_hours` | inteiro entre 0 e 98   | Mínimo de slots de disponibilidade que o usuário deve configurar em `PUT /routine`. `0` = desabilitado |
+| Campo                    | Tipo                 | Descrição                                                                                              |
+| ------------------------ | -------------------- | ------------------------------------------------------------------------------------------------------ |
+| `min_week_hours`         | inteiro positivo     | Mínimo de horas semanais exigidas no registro de horas                                                 |
+| `min_availability_hours` | inteiro entre 0 e 98 | Mínimo de slots de disponibilidade que o usuário deve configurar em `PUT /routine`. `0` = desabilitado |
 
 **Resposta 200** — Configurações atualizadas
 
@@ -578,10 +578,10 @@ Notificações do usuário. Podem ser automáticas (geradas pela aplicação) ou
 }
 ```
 
-| Campo        | Tipo   | Valores                   | Descrição                                          |
-| ------------ | ------ | ------------------------- | -------------------------------------------------- |
-| `origin`     | enum   | `automatic`, `directed`   | Origem da notificação                              |
-| `created_by` | UUID   | UUID ou `null`            | ID do superusuário que criou; `null` se automática |
+| Campo        | Tipo | Valores                 | Descrição                                          |
+| ------------ | ---- | ----------------------- | -------------------------------------------------- |
+| `origin`     | enum | `automatic`, `directed` | Origem da notificação                              |
+| `created_by` | UUID | UUID ou `null`          | ID do superusuário que criou; `null` se automática |
 
 ---
 
@@ -605,9 +605,9 @@ Soft delete de uma notificação. Apenas o dono pode deletar.
 
 **Parâmetros de path**
 
-| Parâmetro | Tipo | Descrição           |
-| --------- | ---- | ------------------- |
-| `id`      | UUID | ID da notificação   |
+| Parâmetro | Tipo | Descrição         |
+| --------- | ---- | ----------------- |
+| `id`      | UUID | ID da notificação |
 
 **Resposta 204** — Notificação deletada
 
@@ -638,22 +638,22 @@ Cria notificações dirigidas para um grupo de usuários. Exclusivo para superus
 }
 ```
 
-| Campo              | Tipo   | Obrigatório | Descrição                                              |
-| ------------------ | ------ | ----------- | ------------------------------------------------------ |
-| `title`            | string | sim         | Mínimo 1 caractere                                     |
-| `description`      | string | não         | Texto livre                                            |
-| `target`           | objeto | sim         | Filtro de destinatários — ambos os campos opcionais    |
-| `target.sector`    | string | não         | Filtra por setor                                       |
-| `target.role`      | enum   | não         | Filtra por role: `consultor`, `gerente`, `diretor`, `assessor`, `presidente` |
+| Campo           | Tipo   | Obrigatório | Descrição                                                                    |
+| --------------- | ------ | ----------- | ---------------------------------------------------------------------------- |
+| `title`         | string | sim         | Mínimo 1 caractere                                                           |
+| `description`   | string | não         | Texto livre                                                                  |
+| `target`        | objeto | sim         | Filtro de destinatários — ambos os campos opcionais                          |
+| `target.sector` | string | não         | Filtra por setor                                                             |
+| `target.role`   | enum   | não         | Filtra por role: `consultor`, `gerente`, `diretor`, `assessor`, `presidente` |
 
 **Lógica de `target`:**
 
-| target                            | Destinatários                                    |
-| --------------------------------- | ------------------------------------------------ |
-| `{}`                              | Todos os usuários ativos                         |
-| `{ sector: "comercial" }`         | Todos os ativos do setor comercial               |
-| `{ role: "diretor" }`             | Todos os diretores ativos                        |
-| `{ sector: "comercial", role: "diretor" }` | Diretor(es) do setor comercial          |
+| target                                     | Destinatários                      |
+| ------------------------------------------ | ---------------------------------- |
+| `{}`                                       | Todos os usuários ativos           |
+| `{ sector: "comercial" }`                  | Todos os ativos do setor comercial |
+| `{ role: "diretor" }`                      | Todos os diretores ativos          |
+| `{ sector: "comercial", role: "diretor" }` | Diretor(es) do setor comercial     |
 
 **Resposta 201**
 
@@ -690,7 +690,6 @@ Health check da API. Não requer autenticação.
 ```
 
 **Resposta 500** — Erro interno no servidor
-
 
 ---
 
@@ -754,12 +753,12 @@ Retorna dois dados complementares sobre os subordinados do caller: a disponibili
 
 **Acesso:** autenticado, rank ≥ 1 (gerente ou superior)
 
-| Caller     | Subordinados visíveis               | Restrição de setor |
-|------------|-------------------------------------|--------------------|
-| Gerente    | consultor                           | mesmo setor        |
-| Diretor    | gerente, consultor                  | mesmo setor        |
-| Assessor   | diretor, gerente, consultor         | nenhuma            |
-| Presidente | diretor, gerente, consultor         | nenhuma            |
+| Caller     | Subordinados visíveis       | Restrição de setor |
+| ---------- | --------------------------- | ------------------ |
+| Gerente    | consultor                   | mesmo setor        |
+| Diretor    | gerente, consultor          | mesmo setor        |
+| Assessor   | diretor, gerente, consultor | nenhuma            |
+| Presidente | diretor, gerente, consultor | nenhuma            |
 
 **Resposta 200**
 
@@ -815,7 +814,6 @@ Retorna `{ "slots": null }` se o target nunca configurou sua rotina.
 
 **Resposta 404** — userId não encontrado
 
-
 ---
 
 ## Reimbursements
@@ -841,14 +839,14 @@ Cria uma nova solicitação de reembolso. O frontend deve fazer upload dos compr
 }
 ```
 
-| Campo | Tipo | Obrigatório | Descrição |
-| --- | --- | --- | --- |
-| `title` | string | sim | Mínimo 1 caractere |
-| `description` | string | sim | Mínimo 1 caractere |
-| `amount_cents` | integer | sim | Valor em centavos, deve ser positivo |
-| `category` | enum | sim | `ingresso`, `alimentação`, `transporte`, `equipamento`, `outro` |
-| `pix_key` | string | sim | Chave PIX para recebimento |
-| `attachments` | array | **sim** | Array de `{ path, name }` com **mínimo 1 item**; cada `path` deve existir no bucket `reimbursement-receipts` |
+| Campo          | Tipo    | Obrigatório | Descrição                                                                                                    |
+| -------------- | ------- | ----------- | ------------------------------------------------------------------------------------------------------------ |
+| `title`        | string  | sim         | Mínimo 1 caractere                                                                                           |
+| `description`  | string  | sim         | Mínimo 1 caractere                                                                                           |
+| `amount_cents` | integer | sim         | Valor em centavos, deve ser positivo                                                                         |
+| `category`     | enum    | sim         | `ingresso`, `alimentação`, `transporte`, `equipamento`, `outro`                                              |
+| `pix_key`      | string  | sim         | Chave PIX para recebimento                                                                                   |
+| `attachments`  | array   | **sim**     | Array de `{ path, name }` com **mínimo 1 item**; cada `path` deve existir no bucket `reimbursement-receipts` |
 
 **Resposta 201** — Reembolso criado
 
@@ -884,9 +882,9 @@ Lista solicitações de reembolso. Usuários comuns veem apenas as próprias; su
 
 **Query params**
 
-| Parâmetro | Tipo | Default | Descrição |
-| --- | --- | --- | --- |
-| `target` | `me` \| `all` | `me` | `me` retorna só os do caller; `all` requer rank ≥ 3 |
+| Parâmetro | Tipo          | Default | Descrição                                           |
+| --------- | ------------- | ------- | --------------------------------------------------- |
+| `target`  | `me` \| `all` | `me`    | `me` retorna só os do caller; `all` requer rank ≥ 3 |
 
 **Resposta 200** — Array de reembolsos (mesmo shape do POST 201)
 
@@ -906,8 +904,8 @@ Retorna todas as solicitações de reembolso de um usuário específico. Exclusi
 
 **Parâmetros de path**
 
-| Parâmetro | Tipo | Descrição |
-| --- | --- | --- |
+| Parâmetro | Tipo | Descrição          |
+| --------- | ---- | ------------------ |
 | `user_id` | UUID | ID do usuário alvo |
 
 **Resposta 200** — Array de reembolsos (mesmo shape do POST 201); retorna `[]` se o usuário não tiver reembolsos
@@ -926,9 +924,9 @@ Aprova ou rejeita uma solicitação de reembolso pendente. Status é one-way: um
 
 **Parâmetros de path**
 
-| Parâmetro | Tipo | Descrição |
-| --- | --- | --- |
-| `id` | UUID | ID do reembolso |
+| Parâmetro | Tipo | Descrição       |
+| --------- | ---- | --------------- |
+| `id`      | UUID | ID do reembolso |
 
 **Body**
 
@@ -936,8 +934,8 @@ Aprova ou rejeita uma solicitação de reembolso pendente. Status é one-way: um
 { "status": "approved" }
 ```
 
-| Campo | Tipo | Valores |
-| --- | --- | --- |
+| Campo    | Tipo | Valores                                            |
+| -------- | ---- | -------------------------------------------------- |
 | `status` | enum | `approved`, `rejected` (`pending` não é permitido) |
 
 **Resposta 200** — Reembolso atualizado (mesmo shape do POST 201)
@@ -990,10 +988,10 @@ Cria um novo item de portfólio.
 { "name": "Auditoria Elétrica", "description": "Verificação de instalações" }
 ```
 
-| Campo | Tipo | Obrigatório |
-| --- | --- | --- |
-| `name` | string | sim — deve ser único |
-| `description` | string | não |
+| Campo         | Tipo   | Obrigatório          |
+| ------------- | ------ | -------------------- |
+| `name`        | string | sim — deve ser único |
+| `description` | string | não                  |
 
 **Resposta 201** — Item criado (mesmo shape do GET)
 
@@ -1080,10 +1078,24 @@ Lista todos os leads com detalhes completos, incluindo `contacts` e `comments` d
     "address_cep": "01310100",
     "interest_items": ["Consultoria Energética"],
     "contacts": [
-      { "id": "uuid", "lead_id": "uuid", "name": "João", "role": "Diretor", "email": "joao@abc.com", "phone": null }
+      {
+        "id": "uuid",
+        "lead_id": "uuid",
+        "name": "João",
+        "role": "Diretor",
+        "email": "joao@abc.com",
+        "phone": null
+      }
     ],
     "comments": [
-      { "id": "uuid", "lead_id": "uuid", "user_id": "uuid", "content": "Comentário.", "created_at": "...", "updated_at": "..." }
+      {
+        "id": "uuid",
+        "lead_id": "uuid",
+        "user_id": "uuid",
+        "content": "Comentário.",
+        "created_at": "...",
+        "updated_at": "..."
+      }
     ],
     "created_at": "2026-06-02T00:00:00.000Z",
     "updated_at": "2026-06-02T00:00:00.000Z"
@@ -1118,19 +1130,19 @@ Cria um novo lead. O campo `created_by` é preenchido automaticamente com o call
 }
 ```
 
-| Campo | Tipo | Obrigatório |
-| --- | --- | --- |
-| `company_name` | string | sim |
-| `cnpj` | string | sim — formato `XX.XXX.XXX/XXXX-XX` com dígitos verificadores válidos (algoritmo Receita Federal) |
-| `address_logradouro` | string | sim |
-| `address_numero` | string | sim |
-| `address_complemento` | string | não |
-| `address_bairro` | string | sim |
-| `address_cidade` | string | sim |
-| `address_estado` | string | sim |
-| `address_cep` | string | sim |
-| `status` | enum | não — padrão `nao_contatado` |
-| `interest_items` | string[] | não — validado contra `portfolio_items` ativos |
+| Campo                 | Tipo     | Obrigatório                                                                                      |
+| --------------------- | -------- | ------------------------------------------------------------------------------------------------ |
+| `company_name`        | string   | sim                                                                                              |
+| `cnpj`                | string   | sim — formato `XX.XXX.XXX/XXXX-XX` com dígitos verificadores válidos (algoritmo Receita Federal) |
+| `address_logradouro`  | string   | sim                                                                                              |
+| `address_numero`      | string   | sim                                                                                              |
+| `address_complemento` | string   | não                                                                                              |
+| `address_bairro`      | string   | sim                                                                                              |
+| `address_cidade`      | string   | sim                                                                                              |
+| `address_estado`      | string   | sim                                                                                              |
+| `address_cep`         | string   | sim                                                                                              |
+| `status`              | enum     | não — padrão `nao_contatado`                                                                     |
+| `interest_items`      | string[] | não — validado contra `portfolio_items` ativos                                                   |
 
 **Resposta 201** — Lead criado (mesmo shape do GET /leads/:id, sem `contacts` e `comments`)
 
@@ -1164,10 +1176,24 @@ Retorna um lead com detalhes completos: `contacts`, `interest_items`, `cnpj` e `
   "address_cep": "01310100",
   "interest_items": ["Consultoria Energética"],
   "contacts": [
-    { "id": "uuid", "lead_id": "uuid", "name": "João", "role": "Diretor", "email": "joao@abc.com", "phone": null }
+    {
+      "id": "uuid",
+      "lead_id": "uuid",
+      "name": "João",
+      "role": "Diretor",
+      "email": "joao@abc.com",
+      "phone": null
+    }
   ],
   "comments": [
-    { "id": "uuid", "lead_id": "uuid", "user_id": "uuid", "content": "Comentário.", "created_at": "...", "updated_at": "..." }
+    {
+      "id": "uuid",
+      "lead_id": "uuid",
+      "user_id": "uuid",
+      "content": "Comentário.",
+      "created_at": "...",
+      "updated_at": "..."
+    }
   ],
   "created_at": "2026-06-02T00:00:00.000Z",
   "updated_at": "2026-06-02T00:00:00.000Z"
@@ -1232,20 +1258,32 @@ Adiciona um contato ao lead. Ao menos `email` ou `phone` deve ser informado.
 **Body**
 
 ```json
-{ "name": "João Silva", "role": "Diretor", "email": "joao@empresa.com", "phone": "11999999999" }
+{
+  "name": "João Silva",
+  "role": "Diretor",
+  "email": "joao@empresa.com",
+  "phone": "11999999999"
+}
 ```
 
-| Campo | Tipo | Obrigatório |
-| --- | --- | --- |
-| `name` | string | sim |
-| `role` | string | sim |
+| Campo   | Tipo   | Obrigatório                            |
+| ------- | ------ | -------------------------------------- |
+| `name`  | string | sim                                    |
+| `role`  | string | sim                                    |
 | `email` | string | não — mas email ou phone é obrigatório |
 | `phone` | string | não — mas email ou phone é obrigatório |
 
 **Resposta 201**
 
 ```json
-{ "id": "uuid", "lead_id": "uuid", "name": "João Silva", "role": "Diretor", "email": "joao@empresa.com", "phone": null }
+{
+  "id": "uuid",
+  "lead_id": "uuid",
+  "name": "João Silva",
+  "role": "Diretor",
+  "email": "joao@empresa.com",
+  "phone": null
+}
 ```
 
 **Resposta 400** — Nem `email` nem `phone` fornecidos
@@ -1305,7 +1343,14 @@ Adiciona um comentário ao lead. `user_id` é preenchido automaticamente com o c
 **Resposta 201**
 
 ```json
-{ "id": "uuid", "lead_id": "uuid", "user_id": "uuid", "content": "...", "created_at": "...", "updated_at": "..." }
+{
+  "id": "uuid",
+  "lead_id": "uuid",
+  "user_id": "uuid",
+  "content": "...",
+  "created_at": "...",
+  "updated_at": "..."
+}
 ```
 
 **Resposta 400** — `content` vazio ou ausente
@@ -1362,7 +1407,14 @@ Lista todas as normas do estatuto. Qualquer membro autenticado pode consultar.
 
 ```json
 [
-  { "id": "uuid", "code": "AN01", "description": "...", "severity": "leve", "created_at": "...", "updated_at": "..." }
+  {
+    "id": "uuid",
+    "code": "AN01",
+    "description": "...",
+    "severity": "leve",
+    "created_at": "...",
+    "updated_at": "..."
+  }
 ]
 ```
 
@@ -1444,15 +1496,32 @@ Retorna as próprias faltas do caller com o placar acumulado. O campo `applied_b
 {
   "violations": [
     {
-      "id": "uuid", "user_id": "uuid",
-      "norm": { "id": "uuid", "code": "AN01", "description": "...", "severity": "leve", "points": 1 },
+      "id": "uuid",
+      "user_id": "uuid",
+      "norm": {
+        "id": "uuid",
+        "code": "AN01",
+        "description": "...",
+        "severity": "leve",
+        "points": 1
+      },
       "source": "manual",
-      "reason": null, "status": "active",
-      "expires_at": "2027-06-02T00:00:00Z", "cancelled_at": null,
-      "applied_at": "2026-06-02T00:00:00Z", "created_at": "..."
+      "reason": null,
+      "status": "active",
+      "expires_at": "2027-06-02T00:00:00Z",
+      "cancelled_at": null,
+      "applied_at": "2026-06-02T00:00:00Z",
+      "created_at": "..."
     }
   ],
-  "summary": { "score": 1, "active_leves": 1, "active_moderadas": 0, "active_graves": 0, "active_desligamentos": 0, "at_risk": false }
+  "summary": {
+    "score": 1,
+    "active_leves": 1,
+    "active_moderadas": 0,
+    "active_graves": 0,
+    "active_desligamentos": 0,
+    "at_risk": false
+  }
 }
 ```
 
@@ -1500,7 +1569,11 @@ Aplica uma falta a um membro. Requer rank ≥ 1 (gerente ou superior). O caller 
 **Body**
 
 ```json
-{ "user_id": "uuid-do-membro", "norm_id": "uuid-da-norma", "reason": "Justificativa opcional" }
+{
+  "user_id": "uuid-do-membro",
+  "norm_id": "uuid-da-norma",
+  "reason": "Justificativa opcional"
+}
 ```
 
 **Resposta 201** — Falta criada (inclui `applied_by` com UUID do caller e `source: "manual"`)
@@ -1544,6 +1617,7 @@ Endpoints do namespace `/internal` são para uso exclusivo de automações inter
 Verifica as horas registradas na semana anterior para todos os usuários ativos e aplica a falta correspondente a quem ficou abaixo de `min_week_hours`. Sem parâmetros de entrada — opera de forma autônoma.
 
 **Regra de seleção de norma:**
+
 - `total_minutes >= min_week_hours * 60` → sem falta
 - `total_minutes >= (min_week_hours / 2) * 60` → falta AN07 (leve)
 - `total_minutes < (min_week_hours / 2) * 60` → falta AN13 (moderada)
@@ -1826,8 +1900,18 @@ Pódio individual dos membros de uma casa. Parâmetro `house_id` é obrigatório
 
 ```json
 [
-  { "user_id": "uuid", "user_name": "Danilo Silva", "points_contributed": 150, "approved_count": 3 },
-  { "user_id": "uuid", "user_name": "Tauan Barros", "points_contributed": 60, "approved_count": 2 }
+  {
+    "user_id": "uuid",
+    "user_name": "Danilo Silva",
+    "points_contributed": 150,
+    "approved_count": 3
+  },
+  {
+    "user_id": "uuid",
+    "user_name": "Tauan Barros",
+    "points_contributed": 60,
+    "approved_count": 2
+  }
 ]
 ```
 
@@ -1944,6 +2028,7 @@ Lista todos os processos seletivos ordenados por `starts_at` decrescente.
 ```
 
 **Campos:**
+
 - `shirt_size`: enum `P | M | G | GG | XG`
 - `period`: inteiro positivo
 - `resume_path`, `transcript_path`, `photo_path`: formato `{uuid}/{resume|transcript|photo}.{ext}`
@@ -2016,9 +2101,11 @@ Atualiza o status de uma candidatura.
 ```
 
 **Campos:**
+
 - `status`: enum `pending | approved | reproved | waitlisted`
 
 **Side-effects:**
+
 - `approved`: cria candidato na etapa 1 do processo (400 se não existirem etapas; 409 se candidato já existir) e envia email de aprovação
 - `reproved`: envia email de rejeição ao candidato
 - `pending` / `waitlisted`: apenas atualiza o campo, sem side-effects
@@ -2054,6 +2141,7 @@ Cria uma etapa em um processo seletivo.
 ```
 
 **Campos:**
+
 - `selection_process_id`: UUID do processo (obrigatório)
 - `name`: nome da etapa (obrigatório)
 - `position`: número inteiro positivo; deve ser único por processo (obrigatório)
@@ -2096,6 +2184,7 @@ Atualiza nome e/ou posição de uma etapa. Quando a posição alvo já está ocu
 ```
 
 **Comportamento de position:**
+
 - Posição livre → apenas move a etapa
 - Posição ocupada por outra etapa → troca as posições das duas etapas atomicamente
 
@@ -2128,6 +2217,7 @@ Lista etapas de processos seletivos, ordenadas por `position` ascendente.
 **Auth:** Obrigatória
 
 **Query params:**
+
 - `selection_process_id` (opcional): filtra por processo
 
 **Resposta 200**
@@ -2157,6 +2247,7 @@ Lista candidatos criados a partir de candidaturas aprovadas.
 **Auth:** Obrigatória
 
 **Query params:**
+
 - `selection_process_id` (opcional): filtra por processo
 - `stage_id` (opcional): filtra por etapa atual
 
@@ -2201,9 +2292,11 @@ Avança ou elimina um candidato em uma etapa.
 ```
 
 **Campos:**
+
 - `status`: `approved` (avançar/aprovar final) ou `reproved` (eliminar)
 
 **Comportamento:**
+
 - `approved` com próxima etapa: avança `current_stage_id` para position+1, mantém status `active`, envia email de avanço
 - `approved` na última etapa: atualiza status para `approved`, envia email de aprovação final
 - `reproved`: atualiza status para `eliminated`, envia email de eliminação
@@ -2237,3 +2330,405 @@ Avança ou elimina um candidato em uma etapa.
 **Resposta 404** — Candidato não encontrado
 
 **Resposta 409** — Candidato já finalizado (eliminated ou approved)
+
+---
+
+## Entrevistas PSEL
+
+Sistema de agendamento de entrevistas do processo seletivo. Consultores cadastram horários disponíveis, admins enviam links de agendamento por email aos candidatos, e candidatos agendam via link autenticado por token.
+
+**Modelo:** cada candidato tem exatamente 1 entrevista; cada entrevista é conduzida por **2 consultores** escolhidos aleatoriamente entre os disponíveis no horário.
+
+---
+
+### `POST /selection-process/interviews`
+
+Cadastra lotes de horários disponíveis para o consultor autenticado.
+
+**Auth:** qualquer usuário autenticado (`ANY_AUTH`)
+
+**Body**
+
+```json
+{ "slots": ["2027-01-20T14:00:00Z", "2027-01-21T09:00:00Z"] }
+```
+
+**Campos:**
+
+- `slots`: array de strings ISO 8601 com offset (mínimo 1 item)
+
+**Validações:**
+
+- Horário deve ser hora fechada (minutos = 0)
+- Hora em BRT (UTC-3) deve estar entre 08:00 e 19:00
+- Não pode ser no passado
+- Slots duplicados para o mesmo consultor são ignorados silenciosamente (`ON CONFLICT DO NOTHING`)
+
+**Resposta 201** — Slots criados (apenas os novos — duplicatas não retornam)
+
+```json
+[
+  {
+    "id": "uuid",
+    "selection_process_id": "uuid",
+    "consultant_id": "uuid",
+    "starts_at": "2027-01-20T14:00:00.000Z",
+    "ends_at": "2027-01-20T15:00:00.000Z",
+    "booking_id": null,
+    "created_at": "2026-06-22T10:00:00.000Z"
+  }
+]
+```
+
+**Resposta 400** — Horário inválido (não é hora fechada, fora do intervalo BRT, ou no passado)
+
+**Resposta 401** — Sem token
+
+**Resposta 404** — Nenhum processo seletivo ativo
+
+---
+
+### `GET /selection-process/interviews`
+
+Lista horários disponíveis para agendamento (uso público, sem auth).
+
+**Auth:** nenhuma
+
+**Regra:** retorna apenas horários com **≥ 2 slots livres** (sem `booking_id`). Horários com apenas 1 consultor disponível não aparecem.
+
+**Resposta 200**
+
+```json
+[
+  {
+    "starts_at": "2027-01-20T14:00:00.000Z",
+    "ends_at": "2027-01-20T15:00:00.000Z"
+  }
+]
+```
+
+Retorna `[]` se não houver processo ativo ou nenhum horário com ≥ 2 slots livres.
+
+---
+
+### `GET /selection-process/interviews/slots`
+
+Lista os slots do consultor autenticado. Assessores e presidentes veem todos os slots de todos os consultores.
+
+**Auth:** qualquer usuário autenticado (`ANY_AUTH`)
+
+**Resposta 200**
+
+```json
+[
+  {
+    "id": "uuid",
+    "selection_process_id": "uuid",
+    "consultant_id": "uuid",
+    "consultant_name": "Maria Silva",
+    "starts_at": "2027-01-20T14:00:00.000Z",
+    "ends_at": "2027-01-20T15:00:00.000Z",
+    "booking_id": "uuid",
+    "candidate_name": "João Costa",
+    "candidate_email": "joao@example.com",
+    "created_at": "2026-06-22T10:00:00.000Z"
+  }
+]
+```
+
+**Notas:**
+
+- `consultant_name` presente apenas para `assessor` e `presidente`; ausente para outros roles
+- `candidate_name` e `candidate_email` presentes apenas em slots com `booking_id`; ausentes caso contrário
+
+**Resposta 401** — Sem token
+
+---
+
+### `PATCH /selection-process/interviews`
+
+Candidato agenda uma entrevista usando token recebido por email.
+
+**Auth:** nenhuma (autenticação via token no body)
+
+**Body**
+
+```json
+{
+  "starts_at": "2027-01-20T14:00:00Z",
+  "token": "abc123..."
+}
+```
+
+**Campos:**
+
+- `starts_at`: horário desejado (ISO 8601 com offset)
+- `token`: token de agendamento recebido por email
+
+**Comportamento:**
+
+1. Valida token (existe + não expirado) → 401 se inválido
+2. Verifica que o candidato ainda não tem entrevista agendada → 409 se já tem
+3. Dentro de transação com `FOR UPDATE`: bloqueia os slots livres no horário, verifica que há ≥ 2, sorteia 2 aleatoriamente, cria o booking e associa os 2 slots
+4. Envia email de confirmação ao candidato (best-effort)
+
+**Resposta 200**
+
+```json
+{
+  "id": "uuid",
+  "selection_process_id": "uuid",
+  "candidate_id": "uuid",
+  "starts_at": "2027-01-20T14:00:00.000Z",
+  "ends_at": "2027-01-20T15:00:00.000Z",
+  "booked_at": "2026-06-22T10:00:00.000Z",
+  "created_at": "2026-06-22T10:00:00.000Z"
+}
+```
+
+**Resposta 400** — Body inválido (falta `token` ou `starts_at`)
+
+**Resposta 401** — Token inexistente ou expirado
+
+**Resposta 409** — Candidato já tem entrevista agendada, ou horário com menos de 2 consultores livres
+
+---
+
+### `POST /selection-process/interviews/send-link`
+
+Envia links de agendamento por email para candidatos selecionados.
+
+**Auth:** `assessor` ou `presidente`
+
+**Body**
+
+```json
+{ "candidate_ids": ["uuid-1", "uuid-2"] }
+```
+
+**Campos:**
+
+- `candidate_ids`: array de UUIDs de candidatos (mínimo 1)
+
+**Comportamento:**
+
+- Para cada candidato: valida que existe, gera token único (`randomBytes(32).toString('hex')`), salva em `psel_interview_tokens` com `expires_at = processo.ends_at`, envia email com link `{FRONTEND_URL}/psel/entrevistas/{token}`
+- Envio de email é best-effort por candidato (falha de email não cancela os demais)
+
+**Resposta 200**
+
+```json
+[
+  { "candidate_id": "uuid-1", "success": true },
+  { "candidate_id": "uuid-2", "success": true }
+]
+```
+
+**Resposta 400** — `candidate_ids` vazio
+
+**Resposta 401** — Sem token
+
+**Resposta 403** — Role insuficiente (ex: consultor, gerente)
+
+**Resposta 404** — Nenhum processo ativo, ou algum `candidate_id` não existe
+
+### `POST /selection-process/interviews/meet-link`
+
+Envia o link do Google Meet ao candidato por email. Persiste o link no booking para rastreabilidade.
+
+**Auth:** Qualquer usuário autenticado **vinculado ao booking** como consultor (`psel_interview_slots.consultant_id`)
+
+**Body**
+
+```json
+{
+  "booking_id": "uuid-do-booking",
+  "meet_link": "https://meet.google.com/abc-defg-hij"
+}
+```
+
+**Campos:**
+
+- `booking_id`: UUID do booking da entrevista
+- `meet_link`: link do Google Meet — deve seguir o padrão `https://meet.google.com/xxx-xxxx-xxx` (3-4-3 letras minúsculas separadas por hífens)
+
+**Comportamento:**
+
+- Valida que o usuário autenticado é consultor do booking (via `psel_interview_slots`)
+- Se o booking já possui `meet_link` preenchido, retorna 409
+- Salva o link em `psel_interview_bookings.meet_link`
+- Envia email ao candidato com o link (best-effort)
+
+**Resposta 200** — booking atualizado
+
+```json
+{
+  "id": "uuid",
+  "selection_process_id": "uuid",
+  "candidate_id": "uuid",
+  "starts_at": "2027-01-01T11:00:00.000Z",
+  "ends_at": "2027-01-01T12:00:00.000Z",
+  "booked_at": "2026-06-22T10:00:00.000Z",
+  "meet_link": "https://meet.google.com/abc-defg-hij",
+  "created_at": "2026-06-22T10:00:00.000Z"
+}
+```
+
+**Resposta 400** — `booking_id` ausente ou `meet_link` com formato inválido
+
+**Resposta 401** — Sem token
+
+**Resposta 403** — Usuário não é consultor do booking
+
+**Resposta 404** — Booking inexistente
+
+**Resposta 409** — Booking já possui meet_link
+
+---
+
+### `POST /selection-process/interviews/:bookingId/evaluation`
+
+Registra a avaliação de um candidato após a entrevista. Apenas um dos dois consultores da dupla pode submeter, e a avaliação é imutável após criação.
+
+**Auth:** Qualquer usuário autenticado **vinculado ao booking** como consultor
+
+**Params:**
+
+- `bookingId`: UUID do booking da entrevista
+
+**Body**
+
+```json
+{
+  "proatividade": 4,
+  "lideranca": 3,
+  "transparencia": 5,
+  "uniao_de_time": 4,
+  "comunicacao": 3,
+  "seriedade": 5,
+  "compromisso": 4,
+  "proposito": 3,
+  "autoresponsabilidade": 5,
+  "autoconfianca": 4,
+  "responsabilidade_social": 3,
+  "criatividade": 5,
+  "procrastinacao": false,
+  "desinteresse": false,
+  "falta_de_transparencia": false,
+  "proposito_vago": false,
+  "vitimizacao": false,
+  "falta_de_confianca": false,
+  "observacoes": "Candidato demonstrou boa comunicação."
+}
+```
+
+**Campos:**
+
+Qualidades desejadas (todos obrigatórios, nota inteira de 1 a 5):
+
+- `proatividade`, `lideranca`, `transparencia`, `uniao_de_time`, `comunicacao`, `seriedade`
+- `compromisso`, `proposito`, `autoresponsabilidade`, `autoconfianca`, `responsabilidade_social`, `criatividade`
+
+Habilidades indesejadas (todos obrigatórios, booleano — `true` = candidato apresentou o comportamento):
+
+- `procrastinacao`, `desinteresse`, `falta_de_transparencia`, `proposito_vago`, `vitimizacao`, `falta_de_confianca`
+
+Campo opcional:
+
+- `observacoes`: texto livre, nullable
+
+**Comportamento:**
+
+- Valida que o usuário autenticado é consultor do booking (via `psel_interview_slots`)
+- Se já existe avaliação para o booking, retorna 409 — a avaliação é única e imutável
+- Insere em `psel_interview_evaluations` com `UNIQUE(booking_id)`
+
+**Resposta 201**
+
+```json
+{
+  "id": "uuid",
+  "booking_id": "uuid",
+  "evaluator_id": "uuid",
+  "proatividade": 4,
+  "lideranca": 3,
+  "transparencia": 5,
+  "uniao_de_time": 4,
+  "comunicacao": 3,
+  "seriedade": 5,
+  "compromisso": 4,
+  "proposito": 3,
+  "autoresponsabilidade": 5,
+  "autoconfianca": 4,
+  "responsabilidade_social": 3,
+  "criatividade": 5,
+  "procrastinacao": false,
+  "desinteresse": false,
+  "falta_de_transparencia": false,
+  "proposito_vago": false,
+  "vitimizacao": false,
+  "falta_de_confianca": false,
+  "observacoes": "Candidato demonstrou boa comunicação.",
+  "created_at": "2026-06-22T15:00:00.000Z"
+}
+```
+
+**Resposta 400** — Nota fora do intervalo (< 1 ou > 5) ou campo obrigatório ausente
+
+**Resposta 401** — Sem token
+
+**Resposta 403** — Usuário não é consultor do booking
+
+**Resposta 404** — Booking inexistente
+
+**Resposta 409** — Avaliação já existe para este booking
+
+---
+
+### `GET /selection-process/interviews/evaluations`
+
+Retorna as avaliações de entrevistas. Filtrável por processo seletivo.
+
+**Autenticação:** Obrigatória (qualquer usuário autenticado)
+
+**Query params:**
+
+| Parâmetro              | Tipo | Obrigatório | Descrição                    |
+| ---------------------- | ---- | ----------- | ---------------------------- |
+| `selection_process_id` | UUID | Não         | Filtra por processo seletivo |
+
+**Resposta 200**
+
+```json
+[
+  {
+    "id": "uuid",
+    "booking_id": "uuid",
+    "evaluator_id": "uuid",
+    "candidate_id": "uuid",
+    "candidate_name": "João Silva",
+    "proatividade": 4,
+    "lideranca": 3,
+    "transparencia": 5,
+    "uniao_de_time": 4,
+    "comunicacao": 3,
+    "seriedade": 5,
+    "compromisso": 4,
+    "proposito": 3,
+    "autoresponsabilidade": 5,
+    "autoconfianca": 4,
+    "responsabilidade_social": 3,
+    "criatividade": 5,
+    "procrastinacao": false,
+    "desinteresse": false,
+    "falta_de_transparencia": false,
+    "proposito_vago": false,
+    "vitimizacao": false,
+    "falta_de_confianca": false,
+    "observacoes": "Candidato demonstrou boa comunicação.",
+    "created_at": "2026-06-22T15:00:00.000Z"
+  }
+]
+```
+
+**Resposta 401** — Sem token

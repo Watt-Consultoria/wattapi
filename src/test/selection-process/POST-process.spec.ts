@@ -141,7 +141,7 @@ describe('POST /selection-process', () => {
   });
 
   describe('Authenticated CONSULTOR', () => {
-    test('Attempting to create a selection process without permission', async () => {
+    test('Attempting to create a selection process', async () => {
       const user = await orchestrator.database.seed.createUser({
         username: 'Consultor POST Process Forbidden',
         email: `ps.post.consultor.${Date.now()}@watt-test.com`,
@@ -164,7 +164,7 @@ describe('POST /selection-process', () => {
   });
 
   describe('Authenticated GERENTE', () => {
-    test('Attempting to create a selection process without permission', async () => {
+    test('Attempting to create a selection process', async () => {
       const user = await orchestrator.database.seed.createUser({
         username: 'Gerente POST Process Forbidden',
         email: `ps.post.gerente.${Date.now()}@watt-test.com`,
@@ -187,7 +187,7 @@ describe('POST /selection-process', () => {
   });
 
   describe('Authenticated DIRETOR', () => {
-    test('Attempting to create a selection process without permission', async () => {
+    test('Attempting to create a selection process', async () => {
       const user = await orchestrator.database.seed.createUser({
         username: 'Diretor POST Process Forbidden',
         email: `ps.post.diretor.${Date.now()}@watt-test.com`,
@@ -210,7 +210,7 @@ describe('POST /selection-process', () => {
   });
 
   describe('Unauthenticated user', () => {
-    test('Attempting to create a selection process without a token', async () => {
+    test('Attempting to create a selection process', async () => {
       const response = await fetch(BASE_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

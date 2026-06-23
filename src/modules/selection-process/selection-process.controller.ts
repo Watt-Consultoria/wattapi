@@ -9,10 +9,14 @@ import {
   Post,
   Put,
   Query,
+  Req,
   UseGuards,
 } from '@nestjs/common';
+import { Request } from 'express';
 import { RoutePolicyGuard } from '../../common/guards/route-policy.guard';
 import { RoutePolicy } from '../../common/decorators/route-policy.decorator';
+import type { JwtData } from '../../common/guards/jwt.guard';
+import type { UserResponse } from '../users/users.service';
 import { SelectionProcessService } from './selection-process.service';
 import {
   createProcessSchema,
@@ -22,6 +26,11 @@ import {
   createStageSchema,
   updateStageSchema,
   updateCandidateStatusSchema,
+  createInterviewSlotsSchema,
+  bookInterviewSlotSchema,
+  sendInterviewLinksSchema,
+  sendMeetLinkSchema,
+  createInterviewEvaluationSchema,
 } from './dto/selection-process.dto';
 import type {
   SelectionProcessResponse,
@@ -29,7 +38,19 @@ import type {
   ApplicationCreatedResponse,
   StageResponse,
   CandidateResponse,
+  InterviewSlotResponse,
+  AvailableTimeSlotResponse,
+  InterviewBookingResponse,
+  InterviewEvaluationResponse,
+  InterviewEvaluationWithCandidateResponse,
+  MySlotResponse,
+  SendLinksResult,
 } from './dto/selection-process.dto';
+
+type AuthRequest = Request & {
+  jwtData: JwtData;
+  user: UserResponse;
+};
 
 const ADMIN_ACCESS = {
   mode: 'authenticated' as const,
@@ -56,6 +77,86 @@ export class SelectionProcessController {
   @RoutePolicy({ access: ANY_AUTH })
   findAll(): Promise<SelectionProcessResponse[]> {
     return this.service.findAll();
+  }
+
+  // ─── Interviews ───────────────────────────────────────────────────────────
+
+  @Post('interviews')
+  @HttpCode(201)
+  @RoutePolicy({ access: ANY_AUTH })
+  createInterviewSlots(
+    @Body() body: unknown,
+    @Req() req: AuthRequest,
+  ): Promise<InterviewSlotResponse[]> {
+    const result = createInterviewSlotsSchema.safeParse(body);
+    if (!result.success) throw new BadRequestException(result.error.flatten());
+    return this.service.createInterviewSlots(req.jwtData.sub, result.data);
+  }
+
+  @Get('interviews/slots')
+  @RoutePolicy({ access: ANY_AUTH })
+  getMySlots(@Req() req: AuthRequest): Promise<MySlotResponse[]> {
+    return this.service.getMySlots(req.jwtData.sub, req.user.role);
+  }
+
+  @Post('interviews/send-link')
+  @HttpCode(200)
+  @RoutePolicy({ access: ADMIN_ACCESS })
+  sendInterviewLinks(@Body() body: unknown): Promise<SendLinksResult[]> {
+    const result = sendInterviewLinksSchema.safeParse(body);
+    if (!result.success) throw new BadRequestException(result.error.flatten());
+    return this.service.sendInterviewLinks(result.data);
+  }
+
+  @Post('interviews/meet-link')
+  @HttpCode(200)
+  @RoutePolicy({ access: ANY_AUTH })
+  sendMeetLink(
+    @Body() body: unknown,
+    @Req() req: AuthRequest,
+  ): Promise<InterviewBookingResponse> {
+    const result = sendMeetLinkSchema.safeParse(body);
+    if (!result.success) throw new BadRequestException(result.error.flatten());
+    return this.service.sendMeetLink(result.data, req.jwtData.sub);
+  }
+
+  @Post('interviews/:bookingId/evaluation')
+  @HttpCode(201)
+  @RoutePolicy({ access: ANY_AUTH })
+  createInterviewEvaluation(
+    @Param('bookingId') bookingId: string,
+    @Body() body: unknown,
+    @Req() req: AuthRequest,
+  ): Promise<InterviewEvaluationResponse> {
+    const result = createInterviewEvaluationSchema.safeParse(body);
+    if (!result.success) throw new BadRequestException(result.error.flatten());
+    return this.service.createInterviewEvaluation(
+      bookingId,
+      result.data,
+      req.jwtData.sub,
+    );
+  }
+
+  @Get('interviews/evaluations')
+  @RoutePolicy({ access: ANY_AUTH })
+  findInterviewEvaluations(
+    @Query('selection_process_id') selectionProcessId?: string,
+  ): Promise<InterviewEvaluationWithCandidateResponse[]> {
+    return this.service.findInterviewEvaluations(selectionProcessId);
+  }
+
+  @Get('interviews')
+  @RoutePolicy({ access: { mode: 'unauthenticated' } })
+  findAvailableTimeSlots(): Promise<AvailableTimeSlotResponse[]> {
+    return this.service.findAvailableTimeSlots();
+  }
+
+  @Patch('interviews')
+  @RoutePolicy({ access: { mode: 'unauthenticated' } })
+  bookInterviewSlot(@Body() body: unknown): Promise<InterviewBookingResponse> {
+    const result = bookInterviewSlotSchema.safeParse(body);
+    if (!result.success) throw new BadRequestException(result.error.flatten());
+    return this.service.bookInterviewSlot(result.data);
   }
 
   @Patch(':processId')

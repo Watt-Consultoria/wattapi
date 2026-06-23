@@ -62,6 +62,10 @@ async function waitForAllServices(): Promise<void> {
 
 async function clearDatabase(): Promise<void> {
   const p = getPool();
+  await p.query('DELETE FROM psel_interview_evaluations');
+  await p.query('DELETE FROM psel_interview_slots');
+  await p.query('DELETE FROM psel_interview_tokens');
+  await p.query('DELETE FROM psel_interview_bookings');
   await p.query('DELETE FROM candidates');
   await p.query('DELETE FROM selection_process_applications');
   await p.query('DELETE FROM selection_process_stages');
@@ -784,10 +788,181 @@ async function uploadSelectionProcessFiles(
   };
 }
 
+export interface CreatedCandidate {
+  id: string;
+  selection_process_id: string;
+  stage_id: string;
+  name: string;
+  email: string;
+}
+
+async function createCandidate({
+  selection_process_id,
+  stage_id,
+  name = 'Candidato Teste',
+  email,
+}: {
+  selection_process_id: string;
+  stage_id: string;
+  name?: string;
+  email?: string;
+}): Promise<CreatedCandidate> {
+  const candidateEmail =
+    email ??
+    `candidato.seed.${Date.now()}.${Math.random().toString(36).slice(2)}@example.com`;
+  const p = getPool();
+
+  const { rows: appRows } = await p.query<{ id: string }>(
+    `INSERT INTO selection_process_applications
+       (selection_process_id, name, course, period, phone, email, instagram,
+        how_heard, motivation, why_watt, shirt_size,
+        resume_path, transcript_path, photo_path)
+     VALUES ($1,$2,'Engenharia de Produção',3,'11999990000',$3,'@candidato',
+             'Redes sociais','Motivação de teste','Por que Watt de teste',
+             'M','00000000-0000-0000-0000-000000000001/resume.pdf',
+             '00000000-0000-0000-0000-000000000001/transcript.pdf',
+             '00000000-0000-0000-0000-000000000001/photo.jpg')
+     RETURNING id`,
+    [selection_process_id, name, candidateEmail],
+  );
+
+  const { rows } = await p.query<{ id: string }>(
+    `INSERT INTO candidates
+       (application_id, selection_process_id, current_stage_id, name, course,
+        period, phone, email, photo_path, shirt_size)
+     VALUES ($1,$2,$3,$4,'Engenharia de Produção',3,'11999990000',$5,
+             '00000000-0000-0000-0000-000000000001/photo.jpg','M')
+     RETURNING id`,
+    [appRows[0].id, selection_process_id, stage_id, name, candidateEmail],
+  );
+
+  return {
+    id: rows[0].id,
+    selection_process_id,
+    stage_id,
+    name,
+    email: candidateEmail,
+  };
+}
+
+export interface CreatedInterviewSlot {
+  id: string;
+  selection_process_id: string;
+  consultant_id: string;
+  starts_at: Date;
+  ends_at: Date;
+  booking_id: string | null;
+}
+
+async function createInterviewSlot({
+  selection_process_id,
+  consultant_id,
+  starts_at = '2027-01-01T11:00:00Z',
+  ends_at,
+  booking_id = null,
+}: {
+  selection_process_id: string;
+  consultant_id: string;
+  starts_at?: string;
+  ends_at?: string;
+  booking_id?: string | null;
+}): Promise<CreatedInterviewSlot> {
+  const resolvedEndsAt =
+    ends_at ??
+    new Date(new Date(starts_at).getTime() + 60 * 60 * 1000).toISOString();
+
+  const { rows } = await getPool().query<CreatedInterviewSlot>(
+    `INSERT INTO psel_interview_slots
+       (selection_process_id, consultant_id, starts_at, ends_at, booking_id)
+     VALUES ($1, $2, $3, $4, $5)
+     ON CONFLICT (consultant_id, starts_at) DO NOTHING
+     RETURNING id, selection_process_id, consultant_id, starts_at, ends_at, booking_id`,
+    [
+      selection_process_id,
+      consultant_id,
+      starts_at,
+      resolvedEndsAt,
+      booking_id,
+    ],
+  );
+  return rows[0];
+}
+
+export interface CreatedInterviewToken {
+  id: string;
+  candidate_id: string;
+  token: string;
+  expires_at: Date;
+}
+
+async function createInterviewToken({
+  candidate_id,
+  token,
+  expires_at,
+}: {
+  candidate_id: string;
+  token?: string;
+  expires_at?: string;
+}): Promise<CreatedInterviewToken> {
+  const resolvedToken = token ?? crypto.randomUUID();
+  const resolvedExpiresAt =
+    expires_at ?? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+
+  const { rows } = await getPool().query<CreatedInterviewToken>(
+    `INSERT INTO psel_interview_tokens (candidate_id, token, expires_at)
+     VALUES ($1, $2, $3)
+     RETURNING id, candidate_id, token, expires_at`,
+    [candidate_id, resolvedToken, resolvedExpiresAt],
+  );
+  return rows[0];
+}
+
+export interface CreatedInterviewBooking {
+  id: string;
+  selection_process_id: string;
+  candidate_id: string;
+  starts_at: Date;
+  ends_at: Date;
+}
+
+async function createInterviewBooking({
+  selection_process_id,
+  candidate_id,
+  starts_at = '2027-01-01T11:00:00Z',
+  ends_at,
+}: {
+  selection_process_id: string;
+  candidate_id: string;
+  starts_at?: string;
+  ends_at?: string;
+}): Promise<CreatedInterviewBooking> {
+  const resolvedEndsAt =
+    ends_at ??
+    new Date(new Date(starts_at).getTime() + 60 * 60 * 1000).toISOString();
+
+  const { rows } = await getPool().query<CreatedInterviewBooking>(
+    `INSERT INTO psel_interview_bookings
+       (selection_process_id, candidate_id, starts_at, ends_at)
+     VALUES ($1, $2, $3, $4)
+     RETURNING id, selection_process_id, candidate_id, starts_at, ends_at`,
+    [selection_process_id, candidate_id, starts_at, resolvedEndsAt],
+  );
+  return rows[0];
+}
+
 async function deleteAllEmails() {
   await fetch(`${emailHttpUrl}/messages`, {
     method: 'DELETE',
   });
+}
+
+async function getAllEmails(): Promise<MailcatcherMessage[]> {
+  const response = await fetch(`${emailHttpUrl}/messages`);
+  const list = (await response.json()) as MailcatcherMessage[];
+  return list.map((m) => ({
+    ...m,
+    recipients: m.recipients.map((r) => r.replace(/^<|>$/g, '')),
+  }));
 }
 
 async function getLastEmail(): Promise<MailcatcherMessage | null> {
@@ -842,10 +1017,15 @@ export default {
       createSelectionProcess,
       createProcessStage,
       createCurrentWeekTimeEntry,
+      createCandidate,
+      createInterviewSlot,
+      createInterviewToken,
+      createInterviewBooking,
     },
   },
   email: {
     deleteAllEmails,
+    getAllEmails,
     getLastEmail,
     waitForLastEmail,
   },
