@@ -62,6 +62,7 @@ async function waitForAllServices(): Promise<void> {
 
 async function clearDatabase(): Promise<void> {
   const p = getPool();
+  await p.query('DELETE FROM cnpj_cache');
   await p.query('DELETE FROM push_subscriptions');
   await p.query('DELETE FROM psel_interview_evaluations');
   await p.query('DELETE FROM psel_interview_slots');
@@ -457,6 +458,27 @@ async function createLeadComment({
      VALUES ($1, $2, $3)
      RETURNING id, lead_id, user_id, content, created_at, updated_at`,
     [lead_id, user_id, content],
+  );
+  return rows[0];
+}
+
+export interface CreatedCnpjCacheEntry {
+  cnpj: string;
+  data: Record<string, unknown>;
+  fetched_at: Date;
+}
+
+async function createCnpjCacheEntry({
+  cnpj,
+  data,
+}: {
+  cnpj: string;
+  data: Record<string, unknown>;
+}): Promise<CreatedCnpjCacheEntry> {
+  const { rows } = await getPool().query<CreatedCnpjCacheEntry>(
+    `INSERT INTO cnpj_cache (cnpj, data) VALUES ($1, $2)
+     RETURNING cnpj, data, fetched_at`,
+    [cnpj, JSON.stringify(data)],
   );
   return rows[0];
 }
@@ -1006,6 +1028,7 @@ export default {
       createLead,
       createLeadContact,
       createLeadComment,
+      createCnpjCacheEntry,
       createNorm,
       createViolation,
       deactivateUser,

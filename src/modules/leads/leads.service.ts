@@ -1,12 +1,16 @@
 import {
+  BadGatewayException,
   BadRequestException,
   ForbiddenException,
+  HttpException,
+  HttpStatus,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import { getRank, isSuperuser } from '../../common/guards/role-hierarchy';
 import type { UserResponse } from '../users/users.service';
+import { formatCnpj } from './dto/lead.dto';
 import type {
   CreateLeadDto,
   UpdateLeadDto,
@@ -408,5 +412,44 @@ export class LeadsService {
       created_at: row.created_at.toISOString(),
       updated_at: row.updated_at.toISOString(),
     };
+  }
+
+  // ─── CNPJ Lookup ──────────────────────────────────────────────────────────
+
+  async lookupCnpj(cnpjDigits: string): Promise<Record<string, unknown>> {
+    const cnpjFormatted = formatCnpj(cnpjDigits);
+
+    const { rows } = await this.db.query<{ data: Record<string, unknown> }>(
+      `SELECT data FROM cnpj_cache WHERE cnpj = $1`,
+      [cnpjFormatted],
+    );
+    if (rows.length > 0) return rows[0].data;
+
+    const response = await fetch(
+      `https://receitaws.com.br/v1/cnpj/${cnpjDigits}`,
+    );
+    if (response.status === 429) {
+      throw new HttpException(
+        'Limite de consultas à ReceitaWS atingido — tente novamente em alguns segundos',
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+    if (!response.ok) {
+      throw new BadGatewayException('Falha na consulta à ReceitaWS');
+    }
+
+    const data = (await response.json()) as Record<string, unknown>;
+    if (data['status'] === 'ERROR') {
+      throw new BadGatewayException(
+        'CNPJ não encontrado ou inativo na ReceitaWS',
+      );
+    }
+
+    await this.db.query(
+      `INSERT INTO cnpj_cache (cnpj, data) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+      [cnpjFormatted, JSON.stringify(data)],
+    );
+
+    return data;
   }
 }
