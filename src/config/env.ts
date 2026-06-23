@@ -14,6 +14,7 @@ export const envSchema = z.object({
   EMAIL_SMTP_PASSWORD: z.string(),
   INTERNAL_JOB_SECRET: z.string().min(16),
   FRONTEND_URL: z.string().min(1),
+  VAPID_PUBLIC_KEY: z.string().min(1),
 });
 
 export type Env = z.infer<typeof envSchema>;

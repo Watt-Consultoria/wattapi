@@ -12,7 +12,7 @@
     "lint:fix": "oxlint --fix --deny-warnings src/ test/ && npm run format",
     "start": "nest start",
     "start:devbase": "nest start --watch",
-    "start:dev": "npm run services:up && npm run services:db:reset && nest start --watch",
+    "start:dev": "npm run services:up && npm run services:edge:start && npm run services:db:reset && nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "test": "npm run services:up && npm run services:db:reset && concurrently -n nest,jest --hide nest -s command-jest -k \"nest start\" \"npm run wait:api && jest\"",
@@ -28,7 +28,8 @@
     "services:migration:up": "supabase migration up --workdir ./src/database/",
     "services:mailcatcher:start": "docker compose -f ./src/test/compose.yaml up -d",
     "services:up": "npm run services:mailcatcher:start && npm run services:db:start",
-    "services:edge:start": "supabase functions serve --workdir ./src/database/",
+    "services:edge:start": "powershell -Command \"Start-Process -NoNewWindow cmd -ArgumentList '/c','npm','run','services:edge:serve'\"",
+    "services:edge:serve": "supabase functions serve --no-verify-jwt --workdir ./src/database/",
     "wait:api": "node ./src/common/scripts/wait-for-api.mjs"
   },
   "dependencies": {

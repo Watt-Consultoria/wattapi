@@ -24,6 +24,7 @@ import {
   updateContactSchema,
   createCommentSchema,
   updateCommentSchema,
+  isValidCnpjDigits,
 } from './dto/lead.dto';
 import type {
   LeadResponse,
@@ -63,6 +64,17 @@ export class LeadsController {
   @RoutePolicy({ access: LEADS_ACCESS })
   findAll(): Promise<LeadDetailResponse[]> {
     return this.leadsService.findAll();
+  }
+
+  @Get('cnpj/:cnpj')
+  @RoutePolicy({ access: LEADS_ACCESS })
+  lookupCnpj(@Param('cnpj') cnpj: string): Promise<Record<string, unknown>> {
+    if (!isValidCnpjDigits(cnpj)) {
+      throw new BadRequestException(
+        'CNPJ inválido — informe exatamente 14 dígitos com dígitos verificadores válidos',
+      );
+    }
+    return this.leadsService.lookupCnpj(cnpj);
   }
 
   @Post()

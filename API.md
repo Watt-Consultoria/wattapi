@@ -669,6 +669,84 @@ Cria notificações dirigidas para um grupo de usuários. Exclusivo para superus
 
 ---
 
+## Push Subscriptions
+
+Gerenciamento de subscrições Web Push por dispositivo. Permite que a PWA registre e remova subscrições associadas ao usuário autenticado, e exponha a chave pública VAPID necessária para o registro no `PushManager`.
+
+---
+
+### `GET /push-subscriptions/vapid-public-key`
+
+Retorna a chave pública VAPID necessária para a PWA registrar a subscrição no browser via `PushManager.subscribe()`.
+
+**Autenticação:** Não obrigatória (endpoint público)
+
+**Resposta 200**
+
+```json
+{ "vapid_public_key": "BLjCDzqsWtu..." }
+```
+
+---
+
+### `POST /push-subscriptions`
+
+Registra a subscrição Web Push do dispositivo atual para o usuário autenticado.
+
+**Autenticação:** Obrigatória
+
+**Body**
+
+```json
+{
+  "endpoint": "https://fcm.googleapis.com/fcm/send/...",
+  "p256dh": "BNcRdreALRFXTkOOUHK1EtK2wtwe6YNE5vIVrDML",
+  "auth": "tBHItJI5svbpez7KI4CCXg"
+}
+```
+
+| Campo      | Tipo   | Obrigatório | Descrição                                   |
+| ---------- | ------ | ----------- | ------------------------------------------- |
+| `endpoint` | string | sim         | URL do push service do browser              |
+| `p256dh`   | string | sim         | Chave pública do cliente (base64url)        |
+| `auth`     | string | sim         | Segredo de autenticação do cliente (base64) |
+
+**Resposta 201**
+
+```json
+{ "id": "uuid" }
+```
+
+**Resposta 400** — Campos obrigatórios ausentes
+
+**Resposta 401** — Token ausente ou inválido
+
+**Resposta 409** — Endpoint já registrado e ativo para este usuário
+
+---
+
+### `DELETE /push-subscriptions/:id`
+
+Remove (soft delete) uma subscrição de push. Apenas o dono pode remover.
+
+**Autenticação:** Obrigatória
+
+**Parâmetros de path**
+
+| Parâmetro | Tipo | Descrição              |
+| --------- | ---- | ---------------------- |
+| `id`      | UUID | ID da subscrição       |
+
+**Resposta 204** — Subscrição removida
+
+**Resposta 401** — Token ausente ou inválido
+
+**Resposta 403** — Usuário não é o dono da subscrição
+
+**Resposta 404** — Subscrição não encontrada ou já removida
+
+---
+
 ## Status
 
 ### `GET /status`
@@ -1054,6 +1132,44 @@ rba: [['minRank', 3], ['sector', 'comercial'], ['roleAndSector', { roles: ['dire
 ```
 
 Ou seja: assessor/presidente (qualquer setor), qualquer role no setor `comercial`, ou diretor do setor `marketing`.
+
+### GET /leads/cnpj/:cnpj
+
+Consulta dados públicos de uma empresa pelo CNPJ. Verifica o cache interno antes de chamar a ReceitaWS, armazenando o resultado para consultas futuras.
+
+**Path param:** `:cnpj` — exatamente 14 dígitos numéricos sem máscara (ex: `12345678000195`).
+
+**Resposta 200** — JSON completo retornado pela ReceitaWS (sem transformação)
+
+```json
+{
+  "cnpj": "12.345.678/0001-95",
+  "tipo": "MATRIZ",
+  "nome": "EMPRESA EXEMPLO LTDA",
+  "fantasia": "",
+  "abertura": "01/01/2000",
+  "situacao": "ATIVA",
+  "logradouro": "RUA DAS FLORES",
+  "numero": "42",
+  "municipio": "SAO PAULO",
+  "uf": "SP",
+  "cep": "01310-100",
+  "email": "contato@empresa.com.br",
+  "telefone": "(11) 1234-5678"
+}
+```
+
+**Resposta 400** — CNPJ inválido (quantidade de dígitos incorreta ou dígitos verificadores inválidos)
+
+**Resposta 401** — Token ausente
+
+**Resposta 403** — Acesso não autorizado pela política de leads
+
+**Resposta 429** — Limite de 3 consultas/minuto da ReceitaWS atingido (plano gratuito) — o cache evita este erro para CNPJs já consultados
+
+**Resposta 502** — Falha na consulta à ReceitaWS (CNPJ não encontrado, inativo, ou API indisponível)
+
+---
 
 ### GET /leads
 

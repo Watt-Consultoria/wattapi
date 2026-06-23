@@ -22,6 +22,7 @@ import { InternalModule } from './modules/internal/internal.module';
 import { HousesModule } from './modules/houses/houses.module';
 import { GamificationModule } from './modules/gamification/gamification.module';
 import { SelectionProcessModule } from './modules/selection-process/selection-process.module';
+import { PushSubscriptionsModule } from './modules/push-subscriptions/push-subscriptions.module';
 import { JwtGuard } from './common/guards/jwt.guard';
 
 @Module({
@@ -47,6 +48,7 @@ import { JwtGuard } from './common/guards/jwt.guard';
     HousesModule,
     GamificationModule,
     SelectionProcessModule,
+    PushSubscriptionsModule,
   ],
   providers: [
     {

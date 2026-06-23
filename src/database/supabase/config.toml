@@ -380,6 +380,11 @@ deno_version = 2
 [edge_runtime.secrets]
 INTERNAL_JOB_SECRET = "env(INTERNAL_JOB_SECRET)"
 API_URL = "env(API_URL)"
+VAPID_PUBLIC_KEY = "env(VAPID_PUBLIC_KEY)"
+VAPID_PRIVATE_KEY = "env(VAPID_PRIVATE_KEY)"
+
+[functions.notification-push-trigger]
+verify_jwt = false
 
 [analytics]
 enabled = false

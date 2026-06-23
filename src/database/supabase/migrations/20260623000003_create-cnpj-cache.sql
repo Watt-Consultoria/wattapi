@@ -1,0 +1,5 @@
+CREATE TABLE cnpj_cache (
+  cnpj TEXT PRIMARY KEY,
+  data JSONB NOT NULL,
+  fetched_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);

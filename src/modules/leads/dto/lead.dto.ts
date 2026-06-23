@@ -30,6 +30,35 @@ export function isValidCnpj(cnpj: string): boolean {
   return secondDigit === Number(digits[13]);
 }
 
+export function isValidCnpjDigits(digits: string): boolean {
+  if (!/^\d{14}$/.test(digits)) return false;
+  if (/^(\d)\1+$/.test(digits)) return false;
+
+  const calcDigit = (slice: string, weights: number[]): number => {
+    const sum = slice
+      .split('')
+      .reduce((acc, d, i) => acc + Number(d) * weights[i], 0);
+    const remainder = sum % 11;
+    return remainder < 2 ? 0 : 11 - remainder;
+  };
+
+  const firstDigit = calcDigit(
+    digits.slice(0, 12),
+    [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2],
+  );
+  if (firstDigit !== Number(digits[12])) return false;
+
+  const secondDigit = calcDigit(
+    digits.slice(0, 13),
+    [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2],
+  );
+  return secondDigit === Number(digits[13]);
+}
+
+export function formatCnpj(digits: string): string {
+  return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8, 12)}-${digits.slice(12, 14)}`;
+}
+
 export const createLeadSchema = z.object({
   company_name: z.string().min(1),
   cnpj: z.string().refine(isValidCnpj, 'CNPJ inválido'),
