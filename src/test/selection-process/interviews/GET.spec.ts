@@ -210,5 +210,52 @@ describe('GET /selection-process/interviews', () => {
       expect(response.status).toBe(200);
       expect(body).toEqual([]);
     });
+
+    test('Slots starting within 24 hours are not returned', async () => {
+      await orchestrator.database.clear();
+
+      const [consA, consB] = await Promise.all([
+        orchestrator.database.seed.createUser({
+          username: 'Consultor A Soon',
+          email: `psel.get.soon.a.${Date.now()}@watt-test.com`,
+          password: '',
+          role: 'consultor',
+          sector: 'projetos',
+        }),
+        orchestrator.database.seed.createUser({
+          username: 'Consultor B Soon',
+          email: `psel.get.soon.b.${Date.now()}@watt-test.com`,
+          password: '',
+          role: 'consultor',
+          sector: 'comercial',
+        }),
+      ]);
+      const process = await orchestrator.database.seed.createSelectionProcess();
+
+      // Slot 23 hours from now (within the 24h cutoff)
+      const soonStart = new Date(Date.now() + 23 * 60 * 60 * 1000);
+      soonStart.setUTCMinutes(0, 0, 0);
+      const soonStartIso = soonStart.toISOString();
+
+      await orchestrator.database.seed.createInterviewSlot({
+        selection_process_id: process.id,
+        consultant_id: consA.id,
+        starts_at: soonStartIso,
+      });
+      await orchestrator.database.seed.createInterviewSlot({
+        selection_process_id: process.id,
+        consultant_id: consB.id,
+        starts_at: soonStartIso,
+      });
+
+      const response = await fetch(BASE_URL);
+      const body = (await response.json()) as AvailableSlot[];
+
+      expect(response.status).toBe(200);
+      const soonSlot = body.find(
+        (s) => s.starts_at === soonStart.toISOString(),
+      );
+      expect(soonSlot).toBeUndefined();
+    });
   });
 });

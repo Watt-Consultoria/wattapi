@@ -726,6 +726,7 @@ export class SelectionProcessService {
       `SELECT starts_at, MAX(ends_at) AS ends_at
        FROM psel_interview_slots
        WHERE selection_process_id = $1
+         AND starts_at > NOW() + INTERVAL '24 hours'
        GROUP BY starts_at
        HAVING COUNT(*) FILTER (WHERE booking_id IS NULL) >= 2
        ORDER BY starts_at ASC`,
