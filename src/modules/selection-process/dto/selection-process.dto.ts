@@ -90,6 +90,53 @@ export type CreateApplicationDto = z.infer<typeof createApplicationSchema>;
 export type UpdateApplicationStatusDto = z.infer<
   typeof updateApplicationStatusSchema
 >;
+export const createInterviewSlotsSchema = z.object({
+  slots: z.array(z.string().datetime({ offset: true })).min(1),
+});
+
+export const bookInterviewSlotSchema = z.object({
+  starts_at: z.string().datetime({ offset: true }),
+  token: z.string().min(1),
+});
+
+export const sendInterviewLinksSchema = z.object({
+  candidate_ids: z.array(z.string().regex(UUID_REGEX)).min(1),
+});
+
+const MEET_LINK_REGEX =
+  /^https:\/\/meet\.google\.com\/[a-z]{3}-[a-z]{4}-[a-z]{3}$/;
+
+export const sendMeetLinkSchema = z.object({
+  booking_id: z.string().regex(UUID_REGEX, 'Invalid UUID'),
+  meet_link: z
+    .string()
+    .regex(MEET_LINK_REGEX, 'Invalid Google Meet link format'),
+});
+
+const scoreField = z.number().int().min(1).max(5);
+
+export const createInterviewEvaluationSchema = z.object({
+  proatividade: scoreField,
+  lideranca: scoreField,
+  transparencia: scoreField,
+  uniao_de_time: scoreField,
+  comunicacao: scoreField,
+  seriedade: scoreField,
+  compromisso: scoreField,
+  proposito: scoreField,
+  autoresponsabilidade: scoreField,
+  autoconfianca: scoreField,
+  responsabilidade_social: scoreField,
+  criatividade: scoreField,
+  procrastinacao: z.boolean(),
+  desinteresse: z.boolean(),
+  falta_de_transparencia: z.boolean(),
+  proposito_vago: z.boolean(),
+  vitimizacao: z.boolean(),
+  falta_de_confianca: z.boolean(),
+  observacoes: z.string().optional(),
+});
+
 export type CreateStageDto = z.infer<typeof createStageSchema>;
 export type UpdateStageDto = z.infer<typeof updateStageSchema>;
 export type UpdateCandidateStatusDto = z.infer<
@@ -187,6 +234,146 @@ export interface StageResponse {
   name: string;
   position: number;
   created_at: string;
+}
+
+export type CreateInterviewSlotsDto = z.infer<
+  typeof createInterviewSlotsSchema
+>;
+export type BookInterviewSlotDto = z.infer<typeof bookInterviewSlotSchema>;
+export type SendInterviewLinksDto = z.infer<typeof sendInterviewLinksSchema>;
+export type SendMeetLinkDto = z.infer<typeof sendMeetLinkSchema>;
+export type CreateInterviewEvaluationDto = z.infer<
+  typeof createInterviewEvaluationSchema
+>;
+
+export interface InterviewSlotRow {
+  id: string;
+  selection_process_id: string;
+  consultant_id: string;
+  starts_at: Date;
+  ends_at: Date;
+  booking_id: string | null;
+  created_at: Date;
+}
+
+export interface InterviewBookingRow {
+  id: string;
+  selection_process_id: string;
+  candidate_id: string;
+  starts_at: Date;
+  ends_at: Date;
+  booked_at: Date;
+  meet_link: string | null;
+  created_at: Date;
+}
+
+export interface InterviewTokenRow {
+  id: string;
+  candidate_id: string;
+  token: string;
+  expires_at: Date;
+  created_at: Date;
+}
+
+export interface InterviewSlotResponse {
+  id: string;
+  selection_process_id: string;
+  consultant_id: string;
+  starts_at: string;
+  ends_at: string;
+  booking_id: string | null;
+  created_at: string;
+}
+
+export interface AvailableTimeSlotResponse {
+  starts_at: string;
+  ends_at: string;
+}
+
+export interface InterviewBookingResponse {
+  id: string;
+  selection_process_id: string;
+  candidate_id: string;
+  starts_at: string;
+  ends_at: string;
+  booked_at: string;
+  meet_link: string | null;
+  created_at: string;
+}
+
+export interface InterviewEvaluationRow {
+  id: string;
+  booking_id: string;
+  evaluator_id: string;
+  proatividade: number;
+  lideranca: number;
+  transparencia: number;
+  uniao_de_time: number;
+  comunicacao: number;
+  seriedade: number;
+  compromisso: number;
+  proposito: number;
+  autoresponsabilidade: number;
+  autoconfianca: number;
+  responsabilidade_social: number;
+  criatividade: number;
+  procrastinacao: boolean;
+  desinteresse: boolean;
+  falta_de_transparencia: boolean;
+  proposito_vago: boolean;
+  vitimizacao: boolean;
+  falta_de_confianca: boolean;
+  observacoes: string | null;
+  created_at: Date;
+}
+
+export interface InterviewEvaluationResponse {
+  id: string;
+  booking_id: string;
+  evaluator_id: string;
+  proatividade: number;
+  lideranca: number;
+  transparencia: number;
+  uniao_de_time: number;
+  comunicacao: number;
+  seriedade: number;
+  compromisso: number;
+  proposito: number;
+  autoresponsabilidade: number;
+  autoconfianca: number;
+  responsabilidade_social: number;
+  criatividade: number;
+  procrastinacao: boolean;
+  desinteresse: boolean;
+  falta_de_transparencia: boolean;
+  proposito_vago: boolean;
+  vitimizacao: boolean;
+  falta_de_confianca: boolean;
+  observacoes: string | null;
+  created_at: string;
+}
+
+export interface InterviewEvaluationWithCandidateResponse extends InterviewEvaluationResponse {
+  candidate_id: string;
+  candidate_name: string;
+}
+
+export interface MySlotResponse {
+  id: string;
+  selection_process_id: string;
+  consultant_id: string;
+  starts_at: string;
+  ends_at: string;
+  booking_id: string | null;
+  created_at: string;
+  consultant_name?: string;
+  candidate_name: string | null;
+  candidate_email: string | null;
+}
+
+export interface SendLinksResult {
+  candidate_id: string;
+  success: boolean;
 }
 
 export interface CandidateResponse {

@@ -2,7 +2,7 @@ CREATE TYPE application_status AS ENUM ('pending', 'approved', 'reproved');
 CREATE TYPE shirt_size AS ENUM ('P', 'M', 'G', 'GG', 'XG');
 
 CREATE TABLE selection_process_applications (
-  id                   UUID              PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id                   UUID              PRIMARY KEY DEFAULT gen_random_uuid(),
   selection_process_id UUID              NOT NULL REFERENCES selection_processes(id),
   name                 TEXT              NOT NULL,
   course               TEXT              NOT NULL,

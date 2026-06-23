@@ -1,5 +1,5 @@
 CREATE TABLE selection_processes (
-  id         UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id         UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
   title      TEXT        NOT NULL,
   starts_at  TIMESTAMPTZ NOT NULL,
   ends_at    TIMESTAMPTZ NOT NULL,
