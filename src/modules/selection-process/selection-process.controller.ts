@@ -31,6 +31,7 @@ import {
   sendInterviewLinksSchema,
   sendMeetLinkSchema,
   createInterviewEvaluationSchema,
+  sendEmailToCandidatesSchema,
 } from './dto/selection-process.dto';
 import type {
   SelectionProcessResponse,
@@ -45,6 +46,7 @@ import type {
   InterviewEvaluationWithCandidateResponse,
   MySlotResponse,
   SendLinksResult,
+  SendEmailResult,
 } from './dto/selection-process.dto';
 
 type AuthRequest = Request & {
@@ -157,6 +159,15 @@ export class SelectionProcessController {
     const result = bookInterviewSlotSchema.safeParse(body);
     if (!result.success) throw new BadRequestException(result.error.flatten());
     return this.service.bookInterviewSlot(result.data);
+  }
+
+  @Post('send-email')
+  @HttpCode(200)
+  @RoutePolicy({ access: ADMIN_ACCESS })
+  sendEmailToCandidates(@Body() body: unknown): Promise<SendEmailResult> {
+    const result = sendEmailToCandidatesSchema.safeParse(body);
+    if (!result.success) throw new BadRequestException(result.error.flatten());
+    return this.service.sendEmailToCandidates(result.data);
   }
 
   @Patch(':processId')
