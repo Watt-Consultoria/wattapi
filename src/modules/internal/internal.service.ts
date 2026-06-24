@@ -5,10 +5,14 @@ import { EmailService } from '../email/email.service';
 import { newViolationEmail } from '../../common/email/NewViolationEmail';
 import type { NormSeverity } from '../norms/dto/norm.dto';
 
-export type WeeklyAbsenceCheckResult = {
+export type WeeklyJobResult = {
   week_start: string;
   users_checked: number;
   violations_applied: number;
+};
+
+export type DailyJobResult = {
+  notifications_created: number;
 };
 
 interface ActiveUser {
@@ -33,33 +37,26 @@ export class InternalService {
     private readonly emailService: EmailService,
   ) {}
 
-  async weeklyAbsenceCheck(): Promise<WeeklyAbsenceCheckResult> {
-    // Determine the start of the previous week (Monday)
+  async checkWeeklyAbsence(): Promise<WeeklyJobResult> {
     const weekStartResult = await this.db.query<{ week_start: Date }>(
       `SELECT date_trunc('week', now() - interval '1 week')::date AS week_start`,
     );
     const weekStart = weekStartResult.rows[0].week_start;
     const weekStartStr = weekStart.toISOString().split('T')[0];
 
-    // Idempotency: check if the job already ran during this calendar week
     const alreadyRan = await this.db.query<{ id: string }>(
       `SELECT id FROM internal_job_runs
-       WHERE job_name = 'weekly-absence-check'
+       WHERE job_name = 'weekly-job'
          AND date_trunc('week', ran_at) = date_trunc('week', now())`,
     );
     if (alreadyRan.rows.length > 0) {
-      throw new ConflictException(
-        'Weekly absence check has already been run for this week',
-      );
+      throw new ConflictException('Weekly job has already been run this week');
     }
 
-    // Verify the current value of min_week_hours
     const minWeekHours = this.settingsService.get('min_week_hours');
-    // For simplicity, we consider half of min_week_hours as the threshold for the lighter violation
     const minWeekMinutes = minWeekHours * 60;
     const halfMinutes = minWeekMinutes / 2;
 
-    // Fetch the relevant norms (AN07 and AN13) to avoid hardcoding their IDs
     const normsResult = await this.db.query<NormRow>(
       `SELECT id, code, description, severity FROM company_norms WHERE code IN ('AN07', 'AN13')`,
     );
@@ -159,7 +156,7 @@ export class InternalService {
     }
 
     await this.db.query(
-      `INSERT INTO internal_job_runs (job_name) VALUES ('weekly-absence-check')`,
+      `INSERT INTO internal_job_runs (job_name) VALUES ('weekly-job')`,
     );
 
     return {
@@ -167,5 +164,39 @@ export class InternalService {
       users_checked: activeUsers.length,
       violations_applied: violationsApplied,
     };
+  }
+
+  async checkDailyActivitiesAndSendNotifications(): Promise<DailyJobResult> {
+    const alreadyRan = await this.db.query<{ id: string }>(
+      `SELECT id FROM internal_job_runs
+       WHERE job_name = 'daily-job'
+         AND date_trunc('day', ran_at) = date_trunc('day', now())`,
+    );
+    if (alreadyRan.rows.length > 0) {
+      throw new ConflictException('Daily job has already been run today');
+    }
+
+    const result = await this.db.query<{ count: string }>(
+      `WITH inserted AS (
+         INSERT INTO notifications (user_id, title, description, origin)
+         SELECT
+           user_id,
+           'Atividade agendada para hoje: ' || name,
+           description,
+           'automatic'
+         FROM activities
+         WHERE date = (now() AT TIME ZONE 'America/Sao_Paulo')::date
+         RETURNING id
+       )
+       SELECT COUNT(*) AS count FROM inserted`,
+    );
+
+    const notificationsCreated = parseInt(result.rows[0].count, 10);
+
+    await this.db.query(
+      `INSERT INTO internal_job_runs (job_name) VALUES ('daily-job')`,
+    );
+
+    return { notifications_created: notificationsCreated };
   }
 }

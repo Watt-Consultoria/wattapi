@@ -1728,9 +1728,29 @@ Endpoints do namespace `/internal` são para uso exclusivo de automações inter
 
 ---
 
-### POST /internal/weekly-absence-check
+### POST /internal/daily-job
 
-Verifica as horas registradas na semana anterior para todos os usuários ativos e aplica a falta correspondente a quem ficou abaixo de `min_week_hours`. Sem parâmetros de entrada — opera de forma autônoma.
+Executa todas as rotinas diárias em sequência. Atualmente: cria notificações para atividades agendadas para hoje (fuso `America/Sao_Paulo`). Sem parâmetros de entrada — opera de forma autônoma.
+
+**Idempotência:** se o job já foi executado no dia corrente, retorna 409 sem processar nada.
+
+**Auth:** `X-Internal-Secret: <INTERNAL_JOB_SECRET>`
+
+**Resposta 200 — Execução normal**
+
+```json
+{ "notifications_created": 5 }
+```
+
+**Resposta 409** — Já executado hoje
+
+**Resposta 401** — Header ausente ou secret incorreto
+
+---
+
+### POST /internal/weekly-job
+
+Executa todas as rotinas semanais em sequência. Atualmente: verifica as horas registradas na semana anterior para todos os usuários ativos e aplica a falta correspondente a quem ficou abaixo de `min_week_hours`. Sem parâmetros de entrada — opera de forma autônoma.
 
 **Regra de seleção de norma:**
 
@@ -1740,7 +1760,7 @@ Verifica as horas registradas na semana anterior para todos os usuários ativos 
 
 Faltas são inseridas com `source = "automatic"` e `applied_by = null`. Um email é enviado ao membro para cada falta aplicada.
 
-**Idempotência:** se o job já foi executado na semana corrente, retorna 200 com `{ already_ran: true }` sem processar nada.
+**Idempotência:** se o job já foi executado na semana corrente, retorna 409 sem processar nada.
 
 **Auth:** `X-Internal-Secret: <INTERNAL_JOB_SECRET>`
 
@@ -1750,11 +1770,7 @@ Faltas são inseridas com `source = "automatic"` e `applied_by = null`. Um email
 { "week_start": "2026-06-01", "users_checked": 12, "violations_applied": 3 }
 ```
 
-**Resposta 200 — Já executado esta semana**
-
-```json
-{ "already_ran": true }
-```
+**Resposta 409** — Já executado esta semana
 
 **Resposta 401** — Header ausente ou secret incorreto
 
