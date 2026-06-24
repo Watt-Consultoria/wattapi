@@ -3,6 +3,20 @@ import { config } from 'dotenv';
 import orchestrator from '../orchestrator';
 import type { MeViolationsResponse } from '../../modules/violations/dto/violation.dto';
 
+function lastWeekMonday(): Date {
+  const now = new Date();
+  const dayOfWeek = now.getUTCDay(); // 0 = Sun, 1 = Mon
+  const daysSinceMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+  const thisMonday = new Date(
+    Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate() - daysSinceMonday,
+    ),
+  );
+  return new Date(thisMonday.getTime() - 7 * 24 * 60 * 60 * 1000);
+}
+
 config({
   path: [
     path.resolve(__dirname, '../../..', '.env'),
@@ -97,9 +111,26 @@ describe('POST /internal/weekly-job', () => {
         sector: 'projetos',
       });
 
-      await orchestrator.database.seed.createCurrentWeekTimeEntry({
+      // Create previous-week entries so the service (which checks last week) sees the right hours
+      const monday = lastWeekMonday();
+      const h = (hours: number) =>
+        new Date(monday.getTime() + hours * 3600 * 1000).toISOString();
+
+      // member: 8 h last week → above min_week_hours (4 h) → no violation
+      await orchestrator.database.seed.createTimeEntry({
         user_id: member.id,
+        clocked_in_at: h(8),
+        clocked_out_at: h(16),
       });
+
+      // memberAN07: 3 h last week → between half (2 h) and min (4 h) → AN07
+      await orchestrator.database.seed.createTimeEntry({
+        user_id: memberAN07.id,
+        clocked_in_at: h(8),
+        clocked_out_at: h(11),
+      });
+
+      // memberAN13: 0 h last week → below half (2 h) → AN13
 
       const response = await fetch(BASE_URL, {
         method: 'POST',
@@ -118,7 +149,10 @@ describe('POST /internal/weekly-job', () => {
       const violationAN07Body =
         (await violationAN07.json()) as MeViolationsResponse;
       expect(violationAN07Body.violations).toHaveLength(1);
-      expect(violationAN07Body.violations[0]).toHaveProperty('code', 'AN07');
+      expect(violationAN07Body.violations[0]).toHaveProperty(
+        'norm.code',
+        'AN07',
+      );
 
       const violationAN13 = await fetch('http://localhost:3001/violations/me', {
         headers: { Authorization: `Bearer ${memberAN13.token}` },
@@ -126,7 +160,10 @@ describe('POST /internal/weekly-job', () => {
       const violationAN13Body =
         (await violationAN13.json()) as MeViolationsResponse;
       expect(violationAN13Body.violations).toHaveLength(1);
-      expect(violationAN13Body.violations[0]).toHaveProperty('code', 'AN13');
+      expect(violationAN13Body.violations[0]).toHaveProperty(
+        'norm.code',
+        'AN13',
+      );
 
       const noViolation = await fetch('http://localhost:3001/violations/me', {
         headers: { Authorization: `Bearer ${member.token}` },
@@ -137,7 +174,11 @@ describe('POST /internal/weekly-job', () => {
 
       const lastEmail = await orchestrator.email.waitForLastEmail();
       expect(lastEmail).not.toBeNull();
-      expect(lastEmail!.recipients).toContain(memberAN13.email);
+
+      const allEmails = await orchestrator.email.getAllEmails();
+      const allRecipients = allEmails.flatMap((e) => e.recipients);
+      expect(allRecipients).toContain(memberAN13.email);
+      expect(allRecipients).toContain(memberAN07.email);
     });
 
     test('With inactive users', async () => {
