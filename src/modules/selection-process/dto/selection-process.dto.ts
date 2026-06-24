@@ -369,6 +369,7 @@ export interface MySlotResponse {
   consultant_name?: string;
   candidate_name: string | null;
   candidate_email: string | null;
+  pair_name?: string | null;
 }
 
 export interface SendLinksResult {

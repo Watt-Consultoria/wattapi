@@ -891,6 +891,7 @@ export class SelectionProcessService {
       consultant_name: string | null;
       candidate_name: string | null;
       candidate_email: string | null;
+      pair_name: string | null;
     };
 
     let rows: SlotJoinRow[];
@@ -898,7 +899,8 @@ export class SelectionProcessService {
     if (isSuperuser) {
       const result = await this.db.query<SlotJoinRow>(
         `SELECT s.*, u.name AS consultant_name,
-                c.name AS candidate_name, c.email AS candidate_email
+                c.name AS candidate_name, c.email AS candidate_email,
+                NULL::text AS pair_name
          FROM psel_interview_slots s
          JOIN users u ON s.consultant_id = u.id
          LEFT JOIN psel_interview_bookings b ON s.booking_id = b.id
@@ -909,7 +911,13 @@ export class SelectionProcessService {
     } else {
       const result = await this.db.query<SlotJoinRow>(
         `SELECT s.*, NULL::text AS consultant_name,
-                c.name AS candidate_name, c.email AS candidate_email
+                c.name AS candidate_name, c.email AS candidate_email,
+                (SELECT u2.name
+                 FROM psel_interview_slots s2
+                 JOIN users u2 ON u2.id = s2.consultant_id
+                 WHERE s2.booking_id = s.booking_id
+                   AND s2.consultant_id != $1
+                 LIMIT 1) AS pair_name
          FROM psel_interview_slots s
          LEFT JOIN psel_interview_bookings b ON s.booking_id = b.id
          LEFT JOIN candidates c ON b.candidate_id = c.id
@@ -1302,6 +1310,7 @@ export class SelectionProcessService {
       consultant_name: string | null;
       candidate_name: string | null;
       candidate_email: string | null;
+      pair_name: string | null;
     },
     isSuperuser: boolean,
   ): MySlotResponse {
@@ -1318,6 +1327,8 @@ export class SelectionProcessService {
     };
     if (isSuperuser) {
       base.consultant_name = row.consultant_name ?? undefined;
+    } else {
+      base.pair_name = row.pair_name;
     }
     return base;
   }

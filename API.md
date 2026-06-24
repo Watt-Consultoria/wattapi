@@ -2547,6 +2547,7 @@ Lista os slots do consultor autenticado. Assessores e presidentes veem todos os 
     "booking_id": "uuid",
     "candidate_name": "João Costa",
     "candidate_email": "joao@example.com",
+    "pair_name": "Carlos Mendes",
     "created_at": "2026-06-22T10:00:00.000Z"
   }
 ]
@@ -2555,7 +2556,8 @@ Lista os slots do consultor autenticado. Assessores e presidentes veem todos os 
 **Notas:**
 
 - `consultant_name` presente apenas para `assessor` e `presidente`; ausente para outros roles
-- `candidate_name` e `candidate_email` presentes apenas em slots com `booking_id`; ausentes caso contrário
+- `candidate_name` e `candidate_email` presentes apenas em slots com `booking_id`; `null` caso contrário
+- `pair_name` presente apenas para consultores comuns (não superusers); contém o nome do outro consultor que compartilha o mesmo booking; `null` se o slot não está agendado ou se não há par
 
 **Resposta 401** — Sem token
 
