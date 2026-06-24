@@ -13,6 +13,7 @@ type MySlotResponse = {
   consultant_name?: string;
   candidate_name: string | null;
   candidate_email: string | null;
+  pair_name?: string | null;
 };
 
 beforeAll(async () => {
@@ -140,6 +141,94 @@ describe('GET /selection-process/interviews/my-slots', () => {
       expect(slot).toBeDefined();
       expect(slot!.candidate_name).toBe('Candidato Entrevistado');
       expect(slot!.candidate_email).toBe(candidate.email);
+    });
+
+    test('Booked slot includes pair_name when another consultant shares the same booking', async () => {
+      await orchestrator.database.clear();
+
+      const [consA, consB] = await Promise.all([
+        orchestrator.database.seed.createUser({
+          username: 'Consultor A Pair Name',
+          email: `psel.myslots.pair.a.${Date.now()}@watt-test.com`,
+          password: '',
+          role: 'consultor',
+          sector: 'projetos',
+        }),
+        orchestrator.database.seed.createUser({
+          username: 'Consultor B Pair Name',
+          email: `psel.myslots.pair.b.${Date.now()}@watt-test.com`,
+          password: '',
+          role: 'consultor',
+          sector: 'projetos',
+        }),
+      ]);
+      const process = await orchestrator.database.seed.createSelectionProcess();
+      const stage = await orchestrator.database.seed.createProcessStage({
+        selection_process_id: process.id,
+      });
+      const candidate = await orchestrator.database.seed.createCandidate({
+        selection_process_id: process.id,
+        stage_id: stage.id,
+        name: 'Candidato Par',
+      });
+      const booking = await orchestrator.database.seed.createInterviewBooking({
+        selection_process_id: process.id,
+        candidate_id: candidate.id,
+        starts_at: '2027-04-01T11:00:00Z',
+      });
+
+      await Promise.all([
+        orchestrator.database.seed.createInterviewSlot({
+          selection_process_id: process.id,
+          consultant_id: consA.id,
+          starts_at: '2027-04-01T11:00:00Z',
+          booking_id: booking.id,
+        }),
+        orchestrator.database.seed.createInterviewSlot({
+          selection_process_id: process.id,
+          consultant_id: consB.id,
+          starts_at: '2027-04-01T11:00:00Z',
+          booking_id: booking.id,
+        }),
+      ]);
+
+      const response = await fetch(BASE_URL, {
+        headers: { Authorization: `Bearer ${consA.token}` },
+      });
+      const body = (await response.json()) as MySlotResponse[];
+
+      expect(response.status).toBe(200);
+      const slot = body.find((s) => s.booking_id === booking.id);
+      expect(slot).toBeDefined();
+      expect(slot!.pair_name).toBe('Consultor B Pair Name');
+    });
+
+    test('Free slot has null pair_name', async () => {
+      await orchestrator.database.clear();
+
+      const cons = await orchestrator.database.seed.createUser({
+        username: 'Consultor Pair Null',
+        email: `psel.myslots.pair.null.${Date.now()}@watt-test.com`,
+        password: '',
+        role: 'consultor',
+        sector: 'projetos',
+      });
+      const process = await orchestrator.database.seed.createSelectionProcess();
+
+      await orchestrator.database.seed.createInterviewSlot({
+        selection_process_id: process.id,
+        consultant_id: cons.id,
+        starts_at: '2027-04-02T11:00:00Z',
+      });
+
+      const response = await fetch(BASE_URL, {
+        headers: { Authorization: `Bearer ${cons.token}` },
+      });
+      const body = (await response.json()) as MySlotResponse[];
+
+      expect(response.status).toBe(200);
+      const slot = body[0];
+      expect(slot.pair_name).toBeNull();
     });
   });
 

@@ -98,7 +98,7 @@ export class SelectionProcessController {
   @Get('interviews/slots')
   @RoutePolicy({ access: ANY_AUTH })
   getMySlots(@Req() req: AuthRequest): Promise<MySlotResponse[]> {
-    return this.service.getMySlots(req.jwtData.sub, req.user.role);
+    return this.service.getSlots(req.jwtData.sub, req.user.role);
   }
 
   @Post('interviews/send-link')

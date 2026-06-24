@@ -1,3 +1,5 @@
+## ADDED Requirements
+
 ### Requirement: Executar rotinas semanais via endpoint interno
 O sistema SHALL expor `POST /internal/weekly-job` protegido por `X-Internal-Secret` que executa todas as rotinas semanais cadastradas em sequência e retorna um resumo da execução.
 
@@ -43,14 +45,3 @@ O sistema SHALL remover o endpoint `POST /internal/weekly-absence-check`.
 #### Scenario: Chamada ao endpoint removido
 - **WHEN** um cliente faz `POST /internal/weekly-absence-check`
 - **THEN** o sistema retorna HTTP 404
-
-### Requirement: Supabase Edge Function como gatilho
-Uma Supabase Edge Function `weekly-job-trigger` SHALL disparar `POST /internal/weekly-job` toda segunda-feira às 03:00 UTC (meia-noite BRT), agendada via pg_cron. A função SHALL incluir o header `X-Internal-Secret` obtido de variável de ambiente do Supabase.
-
-#### Scenario: Edge Function dispara o endpoint no horário correto
-- **WHEN** pg_cron executa a schedule `0 3 * * 1`
-- **THEN** a Edge Function `weekly-job-trigger` é invocada e chama `POST /internal/weekly-job`
-
-#### Scenario: Falha no endpoint não derruba a Edge Function silenciosamente
-- **WHEN** o endpoint retorna status >= 400
-- **THEN** a Edge Function registra o erro no console e retorna status de falha para o pg_cron

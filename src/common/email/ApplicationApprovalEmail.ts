@@ -11,7 +11,7 @@ export function applicationApprovalEmail(data: ApplicationApprovalEmailData): {
 } {
   const { applicantName, processTitle, stageName } = data;
 
-  const subject = `Parabéns, ${applicantName}! Você foi aprovado(a) no processo seletivo`;
+  const subject = `Parabéns, ${applicantName}! Sua candidatura foi aprovada no processo seletivo`;
 
   const html = `<html>
   <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f9f9f9;">

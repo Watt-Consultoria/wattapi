@@ -1783,21 +1783,45 @@ Endpoints do namespace `/internal` são para uso exclusivo de automações inter
 
 ---
 
-### `POST /internal/weekly-absence-check`
+### POST /internal/daily-job
 
-Verifica as horas registradas na semana anterior e aplica faltas automáticas a quem ficou abaixo do mínimo. Faltas são inseridas com `source = "automatic"` e `applied_by = null`. Um email é enviado para cada falta aplicada.
+Executa todas as rotinas diárias em sequência. Atualmente: cria notificações para atividades agendadas para hoje (fuso `America/Sao_Paulo`). Sem parâmetros de entrada — opera de forma autônoma.
+
+**Idempotência:** se o job já foi executado no dia corrente, retorna 409 sem processar nada.
+
+**Auth:** `X-Internal-Secret: <INTERNAL_JOB_SECRET>`
+
+**Resposta 200 — Execução normal**
+
+```json
+{ "notifications_created": 5 }
+```
+
+**Resposta 409** — Já executado hoje
+
+**Resposta 401** — Header ausente ou secret incorreto
+
+---
+
+### POST /internal/weekly-job
+
+Executa todas as rotinas semanais em sequência. Atualmente: verifica as horas registradas na semana anterior para todos os usuários ativos e aplica a falta correspondente a quem ficou abaixo de `min_week_hours`. Sem parâmetros de entrada — opera de forma autônoma.
+
+**Regra de seleção de norma:**
+
+- `total_minutes >= min_week_hours * 60` → sem falta
+- `total_minutes >= (min_week_hours / 2) * 60` → falta AN07 (leve)
+- `total_minutes < (min_week_hours / 2) * 60` → falta AN13 (moderada)
+
+Faltas são inseridas com `source = "automatic"` e `applied_by = null`. Um email é enviado ao membro para cada falta aplicada.
+
+**Idempotência:** se o job já foi executado na semana corrente, retorna 409 sem processar nada.
 
 **Auth:** Header `X-Internal-Secret: <INTERNAL_JOB_SECRET>`
 
 **Regra de seleção de norma:**
 
-| Condição | Falta |
-|----------|-------|
-| `total_minutes ≥ min_week_hours × 60` | Nenhuma |
-| `total_minutes ≥ (min_week_hours / 2) × 60` | AN07 (leve) |
-| `total_minutes < (min_week_hours / 2) × 60` | AN13 (moderada) |
-
-**Idempotência:** se o job já foi executado na semana corrente, retorna `{ already_ran: true }` sem processar nada.
+**Resposta 409** — Já executado esta semana
 
 **Respostas**
 - `200` — `{ "week_start": "...", "users_checked": 12, "violations_applied": 3 }` — execução normal
@@ -2587,13 +2611,19 @@ Lista os próprios slots do consultor autenticado. Assessores e presidentes veem
     "booking_id": "uuid",
     "candidate_name": "João Costa",
     "candidate_email": "joao@example.com",
-    "created_at": "..."
+    "pair_name": "Carlos Mendes",
+    "created_at": "2026-06-22T10:00:00.000Z"
   }
 ]
 ```
 
 > `consultant_name` presente apenas para rank ≥ 3. `candidate_name` e `candidate_email` presentes apenas em slots com `booking_id`.
 
+- `consultant_name` presente apenas para `assessor` e `presidente`; ausente para outros roles
+- `candidate_name` e `candidate_email` presentes apenas em slots com `booking_id`; `null` caso contrário
+- `pair_name` presente apenas para consultores comuns (não superusers); contém o nome do outro consultor que compartilha o mesmo booking; `null` se o slot não está agendado ou se não há par
+
+**Resposta 401** — Sem token
 **Respostas**
 - `200` — Slots do consultor
 - `401` — Sem token
