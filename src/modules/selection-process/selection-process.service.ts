@@ -1065,15 +1065,13 @@ export class SelectionProcessService {
     ]);
 
     if (candidateRows.length > 0) {
-      this.emailService
-        .send({
-          to: candidateRows[0].email,
-          ...interviewMeetLinkEmail({
-            candidateName: candidateRows[0].name,
-            meetLink: dto.meet_link,
-          }),
-        })
-        .catch(() => {});
+      await this.emailService.send({
+        to: candidateRows[0].email,
+        ...interviewMeetLinkEmail({
+          candidateName: candidateRows[0].name,
+          meetLink: dto.meet_link,
+        }),
+      });
     }
 
     return this.toInterviewBookingResponse(updated[0]);

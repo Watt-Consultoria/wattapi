@@ -103,14 +103,14 @@ export const sendInterviewLinksSchema = z.object({
   candidate_ids: z.array(z.string().regex(UUID_REGEX)).min(1),
 });
 
-const MEET_LINK_REGEX =
-  /^https:\/\/meet\.google\.com\/[a-z]{3}-[a-z]{4}-[a-z]{3}$/;
-
 export const sendMeetLinkSchema = z.object({
   booking_id: z.string().regex(UUID_REGEX, 'Invalid UUID'),
   meet_link: z
     .string()
-    .regex(MEET_LINK_REGEX, 'Invalid Google Meet link format'),
+    .regex(
+      /^https:\/\/meet\.google\.com\/[a-z]{3}-[a-z]{4}-[a-z]{3}$/,
+      'Invalid Google Meet link format',
+    ),
 });
 
 const scoreField = z.number().int().min(1).max(5);
