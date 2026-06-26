@@ -106,7 +106,7 @@ export class SelectionProcessController {
   @RoutePolicy({ access: ADMIN_ACCESS })
   sendInterviewLinks(@Body() body: unknown): Promise<SendLinksResult[]> {
     const result = sendInterviewLinksSchema.safeParse(body);
-    if (!result.success) throw new BadRequestException(result.error.flatten());
+    if (!result.success) throw new BadRequestException(result.error.cause);
     return this.service.sendInterviewLinks(result.data);
   }
 
@@ -118,7 +118,7 @@ export class SelectionProcessController {
     @Req() req: AuthRequest,
   ): Promise<InterviewBookingResponse> {
     const result = sendMeetLinkSchema.safeParse(body);
-    if (!result.success) throw new BadRequestException(result.error.flatten());
+    if (!result.success) throw new BadRequestException(result.error.cause);
     return this.service.sendMeetLink(result.data, req.jwtData.sub);
   }
 

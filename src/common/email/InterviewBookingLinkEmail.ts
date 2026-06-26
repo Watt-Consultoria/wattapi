@@ -31,6 +31,12 @@ export function interviewBookingLinkEmail(
         </a>
       </div>
 
+      <div style="background-color: #f3f4f6; border-radius: 6px; padding: 14px 18px; margin-bottom: 32px;">
+        <p style="margin: 0; font-size: 14px; color: #555;">Ou acesse diretamente pelo link:<br>
+          <a href="${bookingUrl}" style="color: #f59e0b; word-break: break-all;">${bookingUrl}</a>
+        </p>
+      </div>
+
       <div style="background-color: #fffbeb; border-left: 4px solid #f59e0b; padding: 14px 18px; border-radius: 4px; margin-bottom: 32px;">
         <span style="font-size: 15px;">💡 <strong>Dica:</strong> O link é pessoal e intransferível. Você poderá usá-lo para escolher o melhor horário disponível.</span>
       </div>
