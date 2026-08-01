@@ -1,3 +1,4 @@
+import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
 const LEAD_STATUSES = ['nao_contatado', 'em_progresso', 'contatado'] as const;
@@ -59,19 +60,36 @@ export function formatCnpj(digits: string): string {
   return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8, 12)}-${digits.slice(12, 14)}`;
 }
 
-export const createLeadSchema = z.object({
-  company_name: z.string().min(1),
-  cnpj: z.string().refine(isValidCnpj, 'CNPJ inválido'),
-  address_logradouro: z.string().min(1),
-  address_numero: z.string().min(1),
-  address_complemento: z.string().optional(),
-  address_bairro: z.string().min(1),
-  address_cidade: z.string().min(1),
-  address_estado: z.string().min(1),
-  address_cep: z.string().min(1),
-  status: z.enum(LEAD_STATUSES).optional(),
-  interest_items: z.array(z.string().min(1)).optional(),
-});
+export const createLeadSchema = z
+  .object({
+    company_name: z.string().min(1),
+    cnpj: z.string().refine(isValidCnpj, 'CNPJ inválido'),
+    address_logradouro: z.string().min(1),
+    address_numero: z.string().min(1),
+    address_complemento: z.string().optional(),
+    address_bairro: z.string().min(1),
+    address_cidade: z.string().min(1),
+    address_estado: z.string().min(1),
+    address_cep: z.string().min(1),
+    status: z.enum(LEAD_STATUSES).optional(),
+    interest_items: z.array(z.string().min(1)).optional(),
+  })
+  .meta({
+    example: {
+      company_name: 'Empresa ABC',
+      cnpj: '12.345.678/0001-95',
+      address_logradouro: 'Rua das Flores',
+      address_numero: '42',
+      address_bairro: 'Jardim Paulista',
+      address_cidade: 'São Paulo',
+      address_estado: 'SP',
+      address_cep: '01310100',
+      status: 'nao_contatado',
+      interest_items: ['Consultoria Energética'],
+    },
+  });
+
+export class CreateLeadDto extends createZodDto(createLeadSchema) {}
 
 export const updateLeadSchema = z
   .object({
@@ -89,7 +107,15 @@ export const updateLeadSchema = z
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: 'At least one field must be provided',
+  })
+  .meta({
+    example: {
+      company_name: 'Empresa ABC Ltda',
+      status: 'em_progresso',
+    },
   });
+
+export class UpdateLeadDto extends createZodDto(updateLeadSchema) {}
 
 export const createContactSchema = z
   .object({
@@ -100,7 +126,17 @@ export const createContactSchema = z
   })
   .refine((data) => data.email !== undefined || data.phone !== undefined, {
     message: 'Either email or phone must be provided',
+  })
+  .meta({
+    example: {
+      name: 'João Silva',
+      role: 'Diretor',
+      email: 'joao@empresa.com',
+      phone: '11999999999',
+    },
   });
+
+export class CreateContactDto extends createZodDto(createContactSchema) {}
 
 export const updateContactSchema = z
   .object({
@@ -111,22 +147,28 @@ export const updateContactSchema = z
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: 'At least one field must be provided',
+  })
+  .meta({ example: { phone: '11988888888' } });
+
+export class UpdateContactDto extends createZodDto(updateContactSchema) {}
+
+export const createCommentSchema = z
+  .object({
+    content: z.string().min(1, 'Content cannot be empty'),
+  })
+  .meta({
+    example: { content: 'Cliente demonstrou interesse em auditoria.' },
   });
 
-export const createCommentSchema = z.object({
-  content: z.string().min(1, 'Content cannot be empty'),
-});
+export class CreateCommentDto extends createZodDto(createCommentSchema) {}
 
-export const updateCommentSchema = z.object({
-  content: z.string().min(1, 'Content cannot be empty'),
-});
+export const updateCommentSchema = z
+  .object({
+    content: z.string().min(1, 'Content cannot be empty'),
+  })
+  .meta({ example: { content: 'Texto corrigido.' } });
 
-export type CreateLeadDto = z.infer<typeof createLeadSchema>;
-export type UpdateLeadDto = z.infer<typeof updateLeadSchema>;
-export type CreateContactDto = z.infer<typeof createContactSchema>;
-export type UpdateContactDto = z.infer<typeof updateContactSchema>;
-export type CreateCommentDto = z.infer<typeof createCommentSchema>;
-export type UpdateCommentDto = z.infer<typeof updateCommentSchema>;
+export class UpdateCommentDto extends createZodDto(updateCommentSchema) {}
 
 export interface LeadRow {
   id: string;
@@ -162,45 +204,4 @@ export interface CommentRow {
   content: string;
   created_at: Date;
   updated_at: Date;
-}
-
-export interface LeadResponse {
-  id: string;
-  company_name: string;
-  cnpj: string;
-  created_by: string;
-  status: string;
-  address_logradouro: string;
-  address_numero: string;
-  address_complemento: string | null;
-  address_bairro: string;
-  address_cidade: string;
-  address_estado: string;
-  address_cep: string;
-  interest_items: string[];
-  created_at: string;
-  updated_at: string;
-}
-
-export interface LeadDetailResponse extends LeadResponse {
-  contacts: ContactRow[];
-  comments: CommentResponse[];
-}
-
-export interface ContactResponse {
-  id: string;
-  lead_id: string;
-  name: string;
-  role: string;
-  email: string | null;
-  phone: string | null;
-}
-
-export interface CommentResponse {
-  id: string;
-  lead_id: string;
-  user_id: string;
-  content: string;
-  created_at: string;
-  updated_at: string;
 }

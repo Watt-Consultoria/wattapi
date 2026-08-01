@@ -11,6 +11,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { ApiResponse } from '@nestjs/swagger';
 import { Request } from 'express';
 import { RoutePolicyGuard } from '../../common/guards/route-policy.guard';
 import { RoutePolicy } from '../../common/decorators/route-policy.decorator';
@@ -18,20 +19,26 @@ import type { JwtData } from '../../common/guards/jwt.guard';
 import type { UserResponse } from '../users/users.service';
 import { LeadsService } from './leads.service';
 import {
-  createLeadSchema,
-  updateLeadSchema,
-  createContactSchema,
-  updateContactSchema,
-  createCommentSchema,
-  updateCommentSchema,
+  CreateLeadDto,
+  UpdateLeadDto,
+  CreateContactDto,
+  UpdateContactDto,
+  CreateCommentDto,
+  UpdateCommentDto,
   isValidCnpjDigits,
 } from './dto/lead.dto';
+import {
+  LeadResponseDto,
+  LeadDetailResponseDto,
+  ContactResponseDto,
+  CommentResponseDto,
+} from './dto/lead.response.dto';
 import type {
   LeadResponse,
   LeadDetailResponse,
   ContactResponse,
   CommentResponse,
-} from './dto/lead.dto';
+} from './dto/lead.response.dto';
 
 type AuthRequest = Request & {
   jwtData: JwtData;
@@ -62,6 +69,7 @@ export class LeadsController {
 
   @Get()
   @RoutePolicy({ access: LEADS_ACCESS })
+  @ApiResponse({ status: 200, type: [LeadDetailResponseDto] })
   findAll(): Promise<LeadDetailResponse[]> {
     return this.leadsService.findAll();
   }
@@ -80,34 +88,29 @@ export class LeadsController {
   @Post()
   @HttpCode(201)
   @RoutePolicy({ access: LEADS_ACCESS })
+  @ApiResponse({ status: 201, type: LeadResponseDto })
   create(
-    @Body() body: unknown,
+    @Body() body: CreateLeadDto,
     @Req() req: AuthRequest,
   ): Promise<LeadResponse> {
-    const result = createLeadSchema.safeParse(body);
-    if (!result.success) {
-      throw new BadRequestException(result.error.flatten());
-    }
-    return this.leadsService.create(req.jwtData.sub, result.data);
+    return this.leadsService.create(req.jwtData.sub, body);
   }
 
   @Get(':id')
   @RoutePolicy({ access: LEADS_ACCESS })
+  @ApiResponse({ status: 200, type: LeadDetailResponseDto })
   findOne(@Param('id') id: string): Promise<LeadDetailResponse> {
     return this.leadsService.findOne(id);
   }
 
   @Patch(':id')
   @RoutePolicy({ access: LEADS_ACCESS })
+  @ApiResponse({ status: 200, type: LeadResponseDto })
   update(
     @Param('id') id: string,
-    @Body() body: unknown,
+    @Body() body: UpdateLeadDto,
   ): Promise<LeadResponse> {
-    const result = updateLeadSchema.safeParse(body);
-    if (!result.success) {
-      throw new BadRequestException(result.error.flatten());
-    }
-    return this.leadsService.update(id, result.data);
+    return this.leadsService.update(id, body);
   }
 
   @Delete(':id')
@@ -122,29 +125,23 @@ export class LeadsController {
   @Post(':id/contacts')
   @HttpCode(201)
   @RoutePolicy({ access: LEADS_ACCESS })
+  @ApiResponse({ status: 201, type: ContactResponseDto })
   addContact(
     @Param('id') leadId: string,
-    @Body() body: unknown,
+    @Body() body: CreateContactDto,
   ): Promise<ContactResponse> {
-    const result = createContactSchema.safeParse(body);
-    if (!result.success) {
-      throw new BadRequestException(result.error.flatten());
-    }
-    return this.leadsService.addContact(leadId, result.data);
+    return this.leadsService.addContact(leadId, body);
   }
 
   @Patch(':id/contacts/:contact_id')
   @RoutePolicy({ access: LEADS_ACCESS })
+  @ApiResponse({ status: 200, type: ContactResponseDto })
   updateContact(
     @Param('id') leadId: string,
     @Param('contact_id') contactId: string,
-    @Body() body: unknown,
+    @Body() body: UpdateContactDto,
   ): Promise<ContactResponse> {
-    const result = updateContactSchema.safeParse(body);
-    if (!result.success) {
-      throw new BadRequestException(result.error.flatten());
-    }
-    return this.leadsService.updateContact(leadId, contactId, result.data);
+    return this.leadsService.updateContact(leadId, contactId, body);
   }
 
   @Delete(':id/contacts/:contact_id')
@@ -162,36 +159,25 @@ export class LeadsController {
   @Post(':id/comments')
   @HttpCode(201)
   @RoutePolicy({ access: LEADS_ACCESS })
+  @ApiResponse({ status: 201, type: CommentResponseDto })
   addComment(
     @Param('id') leadId: string,
-    @Body() body: unknown,
+    @Body() body: CreateCommentDto,
     @Req() req: AuthRequest,
   ): Promise<CommentResponse> {
-    const result = createCommentSchema.safeParse(body);
-    if (!result.success) {
-      throw new BadRequestException(result.error.flatten());
-    }
-    return this.leadsService.addComment(leadId, req.jwtData.sub, result.data);
+    return this.leadsService.addComment(leadId, req.jwtData.sub, body);
   }
 
   @Patch(':id/comments/:comment_id')
   @RoutePolicy({ access: LEADS_ACCESS })
+  @ApiResponse({ status: 200, type: CommentResponseDto })
   updateComment(
     @Param('id') leadId: string,
     @Param('comment_id') commentId: string,
-    @Body() body: unknown,
+    @Body() body: UpdateCommentDto,
     @Req() req: AuthRequest,
   ): Promise<CommentResponse> {
-    const result = updateCommentSchema.safeParse(body);
-    if (!result.success) {
-      throw new BadRequestException(result.error.flatten());
-    }
-    return this.leadsService.updateComment(
-      leadId,
-      commentId,
-      req.user,
-      result.data,
-    );
+    return this.leadsService.updateComment(leadId, commentId, req.user, body);
   }
 
   @Delete(':id/comments/:comment_id')

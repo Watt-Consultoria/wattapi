@@ -13,6 +13,7 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { ApiResponse } from '@nestjs/swagger';
 import { Request } from 'express';
 import { RoutePolicyGuard } from '../../common/guards/route-policy.guard';
 import { RoleSerializerInterceptor } from '../../common/interceptors/role-serializer.interceptor';
@@ -20,7 +21,12 @@ import { RoutePolicy } from '../../common/decorators/route-policy.decorator';
 import { AuthService } from '../auth/auth.service';
 import type { JwtData } from '../../common/guards/jwt.guard';
 import { getRank, isSuperuser } from '../../common/guards/role-hierarchy';
-import { updateUserSchema, createUserSchema } from './dto/create-user.dto';
+import {
+  updateUserSchema,
+  CreateUserDto,
+  UpdateUserDto,
+} from './dto/create-user.dto';
+import { UserResponseDto } from './dto/user.response.dto';
 import { UsersService, type UserResponse } from './users.service';
 
 type AuthRequest = Request & {
@@ -40,17 +46,14 @@ export class UsersController {
   @Post()
   @HttpCode(201)
   @RoutePolicy({ access: { mode: 'unexistent' } })
+  @ApiResponse({ status: 201, type: UserResponseDto })
   async create(
-    @Body() body: unknown,
+    @Body() body: CreateUserDto,
     @Req() req: AuthRequest,
-  ): Promise<import('./users.service').UserResponse> {
+  ): Promise<UserResponse> {
     const { sub } = req.jwtData;
-    const result = createUserSchema.safeParse(body);
-    if (!result.success) {
-      throw new BadRequestException(result.error.flatten());
-    }
     const email = await this.authService.getAuthEmail(sub);
-    return this.usersService.create(sub, email, result.data);
+    return this.usersService.create(sub, email, body);
   }
 
   @Patch(':user_id')
@@ -58,9 +61,10 @@ export class UsersController {
     access: { mode: 'authenticated' },
     output: { cpf: { minRank: 2, selfBypass: true } },
   })
+  @ApiResponse({ status: 200, type: UserResponseDto })
   async update(
     @Param('user_id') userId: string,
-    @Body() body: unknown,
+    @Body() body: UpdateUserDto,
     @Req() req: AuthRequest,
   ): Promise<UserResponse> {
     const caller = req.user;
@@ -77,24 +81,18 @@ export class UsersController {
       ? ['email', 'name', 'role', 'sector', 'cpf']
       : ['name', 'cpf'];
 
-    if (typeof body === 'object' && body !== null) {
-      const allFields = Object.keys(updateUserSchema.shape);
-      const restricted = allFields.filter((f) => !writableFields.includes(f));
-      for (const field of restricted) {
-        if (field in (body as Record<string, unknown>)) {
-          throw new ForbiddenException(`Field '${field}' cannot be modified`);
-        }
+    const allFields = Object.keys(updateUserSchema.shape);
+    const restricted = allFields.filter((f) => !writableFields.includes(f));
+    for (const field of restricted) {
+      if (field in body) {
+        throw new ForbiddenException(`Field '${field}' cannot be modified`);
       }
     }
 
-    const result = updateUserSchema.safeParse(body);
-    if (!result.success) {
-      throw new BadRequestException(result.error.flatten());
-    }
-    if (Object.keys(result.data).length === 0) {
+    if (Object.keys(body).length === 0) {
       throw new BadRequestException('At least one field must be provided');
     }
-    return this.usersService.update(userId, result.data);
+    return this.usersService.update(userId, body);
   }
 
   @Delete(':user_id')
@@ -121,7 +119,8 @@ export class UsersController {
     access: { mode: 'authenticated' },
     output: { cpf: { minRank: 2, selfBypass: false } },
   })
-  findAll(): Promise<import('./users.service').UserResponse[]> {
+  @ApiResponse({ status: 200, type: [UserResponseDto] })
+  findAll(): Promise<UserResponse[]> {
     return this.usersService.findAll();
   }
 
@@ -130,9 +129,8 @@ export class UsersController {
     access: { mode: 'authenticated' },
     output: { cpf: { minRank: 2, selfBypass: true } },
   })
-  findOne(
-    @Param('user_id') userId: string,
-  ): Promise<import('./users.service').UserResponse> {
+  @ApiResponse({ status: 200, type: UserResponseDto })
+  findOne(@Param('user_id') userId: string): Promise<UserResponse> {
     return this.usersService.findOne(userId);
   }
 }

@@ -7,11 +7,13 @@ import {
   Patch,
   UseGuards,
 } from '@nestjs/common';
+import { ApiResponse } from '@nestjs/swagger';
 import { RoutePolicyGuard } from '../../common/guards/route-policy.guard';
 import { RoutePolicy } from '../../common/decorators/route-policy.decorator';
 import { SettingsService } from './settings.service';
-import { updateSettingsSchema } from './dto/settings.dto';
-import type { AppSettings } from './dto/settings.dto';
+import { UpdateSettingsDto } from './dto/settings.dto';
+import { AppSettingsDto } from './dto/settings.response.dto';
+import type { AppSettings } from './dto/settings.response.dto';
 
 @Controller('settings')
 @UseGuards(RoutePolicyGuard)
@@ -20,6 +22,7 @@ export class SettingsController {
 
   @Get()
   @RoutePolicy({ access: { mode: 'authenticated' } })
+  @ApiResponse({ status: 200, type: AppSettingsDto })
   getSettings(): AppSettings {
     return this.settingsService.getAll();
   }
@@ -32,14 +35,11 @@ export class SettingsController {
       rba: [['role', ['assessor', 'presidente']]],
     },
   })
-  async updateSettings(@Body() body: unknown): Promise<AppSettings> {
-    const result = updateSettingsSchema.safeParse(body);
-    if (!result.success) {
-      throw new BadRequestException(result.error.flatten());
-    }
-    if (Object.keys(result.data).length === 0) {
+  @ApiResponse({ status: 200, type: AppSettingsDto })
+  async updateSettings(@Body() body: UpdateSettingsDto): Promise<AppSettings> {
+    if (Object.keys(body).length === 0) {
       throw new BadRequestException('At least one field must be provided');
     }
-    return this.settingsService.update(result.data);
+    return this.settingsService.update(body);
   }
 }

@@ -1,10 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
+import type { HouseRow } from './dto/house.dto';
 import type {
-  HouseRow,
   HouseResponse,
   HouseMemberResponse,
-} from './dto/house.dto';
+  AssignHouseResponse,
+} from './dto/house.response.dto';
 
 interface HouseMemberRow {
   id: string;
@@ -71,7 +72,7 @@ export class HousesService {
   async assignHouse(
     userId: string,
     houseId: string | null,
-  ): Promise<HouseMemberRow & { house_id: string | null }> {
+  ): Promise<AssignHouseResponse> {
     if (houseId !== null) {
       const { rows: houses } = await this.db.query<{ id: string }>(
         `SELECT id FROM houses WHERE id = $1`,

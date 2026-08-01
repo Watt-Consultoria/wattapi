@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Get,
@@ -12,6 +11,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { ApiResponse } from '@nestjs/swagger';
 import { Request } from 'express';
 import { RoutePolicyGuard } from '../../common/guards/route-policy.guard';
 import { RoutePolicy } from '../../common/decorators/route-policy.decorator';
@@ -19,35 +19,55 @@ import type { JwtData } from '../../common/guards/jwt.guard';
 import type { UserResponse } from '../users/users.service';
 import { SelectionProcessService } from './selection-process.service';
 import {
-  createProcessSchema,
-  updateProcessSchema,
-  createApplicationSchema,
-  updateApplicationStatusSchema,
-  createStageSchema,
-  updateStageSchema,
-  updateCandidateStatusSchema,
-  createInterviewSlotsSchema,
-  bookInterviewSlotSchema,
-  sendInterviewLinksSchema,
-  sendMeetLinkSchema,
-  createInterviewEvaluationSchema,
-  sendEmailToCandidatesSchema,
+  CreateProcessDto,
+  UpdateProcessDto,
+  CreateApplicationDto,
+  UpdateApplicationStatusDto,
+  CreateStageDto,
+  UpdateStageDto,
+  UpdateCandidateStatusDto,
+  CreateInterviewSlotsDto,
+  BookInterviewSlotDto,
+  SendInterviewLinksDto,
+  SendMeetLinkDto,
+  CreateInterviewEvaluationDto,
+  SendEmailToCandidatesDto,
 } from './dto/selection-process.dto';
-import type {
-  SelectionProcessResponse,
-  ApplicationResponse,
-  ApplicationCreatedResponse,
-  StageResponse,
-  CandidateResponse,
-  InterviewSlotResponse,
-  AvailableTimeSlotResponse,
-  InterviewBookingResponse,
-  InterviewEvaluationResponse,
-  InterviewEvaluationWithCandidateResponse,
-  MySlotResponse,
-  SendLinksResult,
-  SendEmailResult,
-} from './dto/selection-process.dto';
+import {
+  SelectionProcessResponseDto,
+  type SelectionProcessResponse,
+} from './dto/selection-process.response.dto';
+import {
+  ApplicationResponseDto,
+  ApplicationCreatedResponseDto,
+  type ApplicationResponse,
+  type ApplicationCreatedResponse,
+} from './dto/application.response.dto';
+import { StageResponseDto, type StageResponse } from './dto/stage.response.dto';
+import {
+  CandidateResponseDto,
+  type CandidateResponse,
+} from './dto/candidate.response.dto';
+import {
+  InterviewSlotResponseDto,
+  AvailableTimeSlotResponseDto,
+  InterviewBookingResponseDto,
+  MySlotResponseDto,
+  SendLinksResultDto,
+  SendEmailResultDto,
+  type InterviewSlotResponse,
+  type AvailableTimeSlotResponse,
+  type InterviewBookingResponse,
+  type MySlotResponse,
+  type SendLinksResult,
+  type SendEmailResult,
+} from './dto/interview.response.dto';
+import {
+  InterviewEvaluationResponseDto,
+  InterviewEvaluationWithCandidateResponseDto,
+  type InterviewEvaluationResponse,
+  type InterviewEvaluationWithCandidateResponse,
+} from './dto/interview-evaluation.response.dto';
 
 type AuthRequest = Request & {
   jwtData: JwtData;
@@ -69,14 +89,16 @@ export class SelectionProcessController {
   @Post()
   @HttpCode(201)
   @RoutePolicy({ access: ADMIN_ACCESS })
-  createProcess(@Body() body: unknown): Promise<SelectionProcessResponse> {
-    const result = createProcessSchema.safeParse(body);
-    if (!result.success) throw new BadRequestException(result.error.flatten());
-    return this.service.createProcess(result.data);
+  @ApiResponse({ status: 201, type: SelectionProcessResponseDto })
+  createProcess(
+    @Body() body: CreateProcessDto,
+  ): Promise<SelectionProcessResponse> {
+    return this.service.createProcess(body);
   }
 
   @Get()
   @RoutePolicy({ access: ANY_AUTH })
+  @ApiResponse({ status: 200, type: [SelectionProcessResponseDto] })
   findAll(): Promise<SelectionProcessResponse[]> {
     return this.service.findAll();
   }
@@ -86,17 +108,17 @@ export class SelectionProcessController {
   @Post('interviews')
   @HttpCode(201)
   @RoutePolicy({ access: ANY_AUTH })
+  @ApiResponse({ status: 201, type: [InterviewSlotResponseDto] })
   createInterviewSlots(
-    @Body() body: unknown,
+    @Body() body: CreateInterviewSlotsDto,
     @Req() req: AuthRequest,
   ): Promise<InterviewSlotResponse[]> {
-    const result = createInterviewSlotsSchema.safeParse(body);
-    if (!result.success) throw new BadRequestException(result.error.flatten());
-    return this.service.createInterviewSlots(req.jwtData.sub, result.data);
+    return this.service.createInterviewSlots(req.jwtData.sub, body);
   }
 
   @Get('interviews/slots')
   @RoutePolicy({ access: ANY_AUTH })
+  @ApiResponse({ status: 200, type: [MySlotResponseDto] })
   getMySlots(@Req() req: AuthRequest): Promise<MySlotResponse[]> {
     return this.service.getSlots(req.jwtData.sub, req.user.role);
   }
@@ -104,43 +126,46 @@ export class SelectionProcessController {
   @Post('interviews/send-link')
   @HttpCode(200)
   @RoutePolicy({ access: ADMIN_ACCESS })
-  sendInterviewLinks(@Body() body: unknown): Promise<SendLinksResult[]> {
-    const result = sendInterviewLinksSchema.safeParse(body);
-    if (!result.success) throw new BadRequestException(result.error.cause);
-    return this.service.sendInterviewLinks(result.data);
+  @ApiResponse({ status: 200, type: [SendLinksResultDto] })
+  sendInterviewLinks(
+    @Body() body: SendInterviewLinksDto,
+  ): Promise<SendLinksResult[]> {
+    return this.service.sendInterviewLinks(body);
   }
 
   @Post('interviews/meet-link')
   @HttpCode(200)
   @RoutePolicy({ access: ANY_AUTH })
+  @ApiResponse({ status: 200, type: InterviewBookingResponseDto })
   sendMeetLink(
-    @Body() body: unknown,
+    @Body() body: SendMeetLinkDto,
     @Req() req: AuthRequest,
   ): Promise<InterviewBookingResponse> {
-    const result = sendMeetLinkSchema.safeParse(body);
-    if (!result.success) throw new BadRequestException(result.error.cause);
-    return this.service.sendMeetLink(result.data, req.jwtData.sub);
+    return this.service.sendMeetLink(body, req.jwtData.sub);
   }
 
   @Post('interviews/:bookingId/evaluation')
   @HttpCode(201)
   @RoutePolicy({ access: ANY_AUTH })
+  @ApiResponse({ status: 201, type: InterviewEvaluationResponseDto })
   createInterviewEvaluation(
     @Param('bookingId') bookingId: string,
-    @Body() body: unknown,
+    @Body() body: CreateInterviewEvaluationDto,
     @Req() req: AuthRequest,
   ): Promise<InterviewEvaluationResponse> {
-    const result = createInterviewEvaluationSchema.safeParse(body);
-    if (!result.success) throw new BadRequestException(result.error.flatten());
     return this.service.createInterviewEvaluation(
       bookingId,
-      result.data,
+      body,
       req.jwtData.sub,
     );
   }
 
   @Get('interviews/evaluations')
   @RoutePolicy({ access: ANY_AUTH })
+  @ApiResponse({
+    status: 200,
+    type: [InterviewEvaluationWithCandidateResponseDto],
+  })
   findInterviewEvaluations(
     @Query('selection_process_id') selectionProcessId?: string,
   ): Promise<InterviewEvaluationWithCandidateResponse[]> {
@@ -149,51 +174,53 @@ export class SelectionProcessController {
 
   @Get('interviews')
   @RoutePolicy({ access: { mode: 'unauthenticated' } })
+  @ApiResponse({ status: 200, type: [AvailableTimeSlotResponseDto] })
   findAvailableTimeSlots(): Promise<AvailableTimeSlotResponse[]> {
     return this.service.findAvailableTimeSlots();
   }
 
   @Patch('interviews')
   @RoutePolicy({ access: { mode: 'unauthenticated' } })
-  bookInterviewSlot(@Body() body: unknown): Promise<InterviewBookingResponse> {
-    const result = bookInterviewSlotSchema.safeParse(body);
-    if (!result.success) throw new BadRequestException(result.error.flatten());
-    return this.service.bookInterviewSlot(result.data);
+  @ApiResponse({ status: 200, type: InterviewBookingResponseDto })
+  bookInterviewSlot(
+    @Body() body: BookInterviewSlotDto,
+  ): Promise<InterviewBookingResponse> {
+    return this.service.bookInterviewSlot(body);
   }
 
   @Post('send-email')
   @HttpCode(200)
   @RoutePolicy({ access: ADMIN_ACCESS })
-  sendEmailToCandidates(@Body() body: unknown): Promise<SendEmailResult> {
-    const result = sendEmailToCandidatesSchema.safeParse(body);
-    if (!result.success) throw new BadRequestException(result.error.flatten());
-    return this.service.sendEmailToCandidates(result.data);
+  @ApiResponse({ status: 200, type: SendEmailResultDto })
+  sendEmailToCandidates(
+    @Body() body: SendEmailToCandidatesDto,
+  ): Promise<SendEmailResult> {
+    return this.service.sendEmailToCandidates(body);
   }
 
   @Patch(':processId')
   @RoutePolicy({ access: ADMIN_ACCESS })
+  @ApiResponse({ status: 200, type: SelectionProcessResponseDto })
   updateProcess(
     @Param('processId') processId: string,
-    @Body() body: unknown,
+    @Body() body: UpdateProcessDto,
   ): Promise<SelectionProcessResponse> {
-    const result = updateProcessSchema.safeParse(body);
-    if (!result.success) throw new BadRequestException(result.error.flatten());
-    return this.service.updateProcess(processId, result.data);
+    return this.service.updateProcess(processId, body);
   }
 
   @Post('applications')
   @HttpCode(201)
   @RoutePolicy({ access: { mode: 'unauthenticated' } })
+  @ApiResponse({ status: 201, type: ApplicationCreatedResponseDto })
   createApplication(
-    @Body() body: unknown,
+    @Body() body: CreateApplicationDto,
   ): Promise<ApplicationCreatedResponse> {
-    const result = createApplicationSchema.safeParse(body);
-    if (!result.success) throw new BadRequestException(result.error.flatten());
-    return this.service.createApplication(result.data);
+    return this.service.createApplication(body);
   }
 
   @Get('applications')
   @RoutePolicy({ access: ANY_AUTH })
+  @ApiResponse({ status: 200, type: [ApplicationResponseDto] })
   findApplications(
     @Query('selection_process_id') selectionProcessId?: string,
   ): Promise<ApplicationResponse[]> {
@@ -202,26 +229,25 @@ export class SelectionProcessController {
 
   @Patch('applications/:applicationId')
   @RoutePolicy({ access: ADMIN_ACCESS })
+  @ApiResponse({ status: 200, type: ApplicationResponseDto })
   updateApplicationStatus(
     @Param('applicationId') applicationId: string,
-    @Body() body: unknown,
+    @Body() body: UpdateApplicationStatusDto,
   ): Promise<ApplicationResponse> {
-    const result = updateApplicationStatusSchema.safeParse(body);
-    if (!result.success) throw new BadRequestException(result.error.flatten());
-    return this.service.updateApplicationStatus(applicationId, result.data);
+    return this.service.updateApplicationStatus(applicationId, body);
   }
 
   @Post('stages')
   @HttpCode(201)
   @RoutePolicy({ access: ADMIN_ACCESS })
-  createStage(@Body() body: unknown): Promise<StageResponse> {
-    const result = createStageSchema.safeParse(body);
-    if (!result.success) throw new BadRequestException(result.error.flatten());
-    return this.service.createStage(result.data);
+  @ApiResponse({ status: 201, type: StageResponseDto })
+  createStage(@Body() body: CreateStageDto): Promise<StageResponse> {
+    return this.service.createStage(body);
   }
 
   @Get('stages')
   @RoutePolicy({ access: ANY_AUTH })
+  @ApiResponse({ status: 200, type: [StageResponseDto] })
   findStages(
     @Query('selection_process_id') selectionProcessId?: string,
   ): Promise<StageResponse[]> {
@@ -230,17 +256,17 @@ export class SelectionProcessController {
 
   @Put('stages/:stageId')
   @RoutePolicy({ access: ADMIN_ACCESS })
+  @ApiResponse({ status: 200, type: StageResponseDto })
   updateStage(
     @Param('stageId') stageId: string,
-    @Body() body: unknown,
+    @Body() body: UpdateStageDto,
   ): Promise<StageResponse> {
-    const result = updateStageSchema.safeParse(body);
-    if (!result.success) throw new BadRequestException(result.error.flatten());
-    return this.service.updateStage(stageId, result.data);
+    return this.service.updateStage(stageId, body);
   }
 
   @Get('candidates')
   @RoutePolicy({ access: ANY_AUTH })
+  @ApiResponse({ status: 200, type: [CandidateResponseDto] })
   findCandidates(
     @Query('selection_process_id') selectionProcessId?: string,
     @Query('stage_id') stageId?: string,
@@ -250,12 +276,11 @@ export class SelectionProcessController {
 
   @Patch('candidates/:candidateId')
   @RoutePolicy({ access: ADMIN_ACCESS })
+  @ApiResponse({ status: 200, type: CandidateResponseDto })
   updateCandidateStatus(
     @Param('candidateId') candidateId: string,
-    @Body() body: unknown,
+    @Body() body: UpdateCandidateStatusDto,
   ): Promise<CandidateResponse> {
-    const result = updateCandidateStatusSchema.safeParse(body);
-    if (!result.success) throw new BadRequestException(result.error.flatten());
-    return this.service.updateCandidateStatus(candidateId, result.data);
+    return this.service.updateCandidateStatus(candidateId, body);
   }
 }

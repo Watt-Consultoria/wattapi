@@ -1,6 +1,7 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
-import type { AppSettings, UpdateSettingsData } from './dto/settings.dto';
+import type { UpdateSettingsData } from './dto/settings.dto';
+import type { AppSettings } from './dto/settings.response.dto';
 
 const ALLOWED_COLUMNS = new Set<keyof AppSettings>([
   'min_week_hours',

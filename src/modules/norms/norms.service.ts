@@ -4,12 +4,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
-import type {
-  CreateNormDto,
-  NormResponse,
-  NormRow,
-  UpdateNormDto,
-} from './dto/norm.dto';
+import type { CreateNormDto, NormRow, UpdateNormDto } from './dto/norm.dto';
+import type { NormResponse } from './dto/norm.response.dto';
+
+export type { NormResponse };
 
 type PgError = { code?: string };
 

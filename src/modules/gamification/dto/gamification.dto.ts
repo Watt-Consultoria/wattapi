@@ -1,12 +1,15 @@
+import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
 // ─── Cycles ──────────────────────────────────────────────────────────────────
 
-export const createCycleSchema = z.object({
-  name: z.string().min(1),
-});
+export const createCycleSchema = z
+  .object({
+    name: z.string().min(1),
+  })
+  .meta({ example: { name: '1º Semestre 2026' } });
 
-export type CreateCycleDto = z.infer<typeof createCycleSchema>;
+export class CreateCycleDto extends createZodDto(createCycleSchema) {}
 
 export interface CycleRow {
   id: string;
@@ -17,32 +20,34 @@ export interface CycleRow {
   created_at: Date;
 }
 
-export interface CycleResponse {
-  id: string;
-  name: string;
-  started_at: string;
-  ended_at: string | null;
-  created_by: string;
-  created_at: string;
-}
-
 // ─── Tasks ───────────────────────────────────────────────────────────────────
 
-export const createTaskSchema = z.object({
-  title: z.string().min(1),
-  description: z.string().min(1),
-  points: z.number().int().positive(),
-});
+export const createTaskSchema = z
+  .object({
+    title: z.string().min(1),
+    description: z.string().min(1),
+    points: z.number().int().positive(),
+  })
+  .meta({
+    example: {
+      title: 'Participar de vídeo do marketing',
+      description: 'Aparecer em um vídeo oficial da Watt Consultoria',
+      points: 50,
+    },
+  });
 
-export const updateTaskSchema = z.object({
-  title: z.string().min(1).optional(),
-  description: z.string().min(1).optional(),
-  points: z.number().int().positive().optional(),
-  is_active: z.boolean().optional(),
-});
+export class CreateTaskDto extends createZodDto(createTaskSchema) {}
 
-export type CreateTaskDto = z.infer<typeof createTaskSchema>;
-export type UpdateTaskDto = z.infer<typeof updateTaskSchema>;
+export const updateTaskSchema = z
+  .object({
+    title: z.string().min(1).optional(),
+    description: z.string().min(1).optional(),
+    points: z.number().int().positive().optional(),
+    is_active: z.boolean().optional(),
+  })
+  .meta({ example: { points: 75, is_active: false } });
+
+export class UpdateTaskDto extends createZodDto(updateTaskSchema) {}
 
 export interface TaskRow {
   id: string;
@@ -55,37 +60,42 @@ export interface TaskRow {
   updated_at: Date;
 }
 
-export interface TaskResponse {
-  id: string;
-  title: string;
-  description: string;
-  points: number;
-  is_active: boolean;
-  created_by: string;
-  created_at: string;
-  updated_at: string;
-}
-
 // ─── Submissions ─────────────────────────────────────────────────────────────
 
-export const createSubmissionSchema = z.object({
-  task_id: z
-    .string()
-    .regex(
-      /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/i,
-      'Invalid UUID',
-    ),
-  description: z.string().min(1),
-  file_path: z.string().min(1),
-});
+export const createSubmissionSchema = z
+  .object({
+    task_id: z
+      .string()
+      .regex(
+        /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/i,
+        'Invalid UUID',
+      ),
+    description: z.string().min(1),
+    file_path: z.string().min(1),
+  })
+  .meta({
+    example: {
+      task_id: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
+      description: 'Participei do vídeo em 04/06/2026',
+      file_path: 'proofs/uuid-do-usuario/nome-do-arquivo.pdf',
+    },
+  });
 
-export const reviewSubmissionSchema = z.object({
-  status: z.enum(['approved', 'rejected']),
-  rejection_reason: z.string().optional(),
-});
+export class CreateSubmissionDto extends createZodDto(createSubmissionSchema) {}
 
-export type CreateSubmissionDto = z.infer<typeof createSubmissionSchema>;
-export type ReviewSubmissionDto = z.infer<typeof reviewSubmissionSchema>;
+export const reviewSubmissionSchema = z
+  .object({
+    status: z.enum(['approved', 'rejected']),
+    rejection_reason: z.string().optional(),
+  })
+  .meta({
+    example: {
+      status: 'approved',
+      rejection_reason: 'opcional — apenas para rejections',
+    },
+  });
+
+export class ReviewSubmissionDto extends createZodDto(reviewSubmissionSchema) {}
 
 export interface SubmissionRow {
   id: string;
@@ -101,35 +111,4 @@ export interface SubmissionRow {
   reviewed_at: Date | null;
   created_at: Date;
   updated_at: Date;
-}
-
-export interface SubmissionResponse {
-  id: string;
-  task_id: string;
-  user_id: string;
-  house_id: string;
-  cycle_id: string;
-  description: string;
-  file_url: string;
-  status: 'pending' | 'approved' | 'rejected';
-  rejection_reason: string | null;
-  reviewed_by: string | null;
-  reviewed_at: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-// ─── Leaderboard ─────────────────────────────────────────────────────────────
-
-export interface LeaderboardEntry {
-  house_id: string;
-  house_name: string;
-  total_points: number;
-}
-
-export interface PodiumEntry {
-  user_id: string;
-  user_name: string;
-  points_contributed: number;
-  approved_count: number;
 }

@@ -12,9 +12,11 @@ import type {
   UpdateReimbursementStatusDto,
   ReimbursementAttachmentRow,
   ReimbursementRow,
+} from './dto/reimbursement.dto';
+import type {
   ReimbursementResponse,
   ReimbursementAttachmentResponse,
-} from './dto/reimbursement.dto';
+} from './dto/reimbursement.response.dto';
 
 const BUCKET = 'reimbursement-receipts';
 

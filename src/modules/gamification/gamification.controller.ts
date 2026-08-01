@@ -11,6 +11,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { ApiResponse } from '@nestjs/swagger';
 import { Request } from 'express';
 import { RoutePolicyGuard } from '../../common/guards/route-policy.guard';
 import { RoutePolicy } from '../../common/decorators/route-policy.decorator';
@@ -19,19 +20,26 @@ import type { UserResponse } from '../users/users.service';
 import { GamificationService } from './gamification.service';
 import { isSuperuser } from '../../common/guards/role-hierarchy';
 import {
-  createCycleSchema,
-  createTaskSchema,
-  updateTaskSchema,
-  createSubmissionSchema,
-  reviewSubmissionSchema,
+  CreateCycleDto,
+  CreateTaskDto,
+  UpdateTaskDto,
+  CreateSubmissionDto,
+  ReviewSubmissionDto,
 } from './dto/gamification.dto';
+import {
+  CycleResponseDto,
+  TaskResponseDto,
+  SubmissionResponseDto,
+  LeaderboardEntryDto,
+  PodiumEntryDto,
+} from './dto/gamification.response.dto';
 import type {
   CycleResponse,
   TaskResponse,
   SubmissionResponse,
   LeaderboardEntry,
   PodiumEntry,
-} from './dto/gamification.dto';
+} from './dto/gamification.response.dto';
 
 type AuthRequest = Request & {
   jwtData: JwtData;
@@ -53,13 +61,12 @@ export class GamificationCyclesController {
       rba: [['role', ['assessor', 'presidente']]],
     },
   })
+  @ApiResponse({ status: 201, type: CycleResponseDto })
   create(
-    @Body() body: unknown,
+    @Body() body: CreateCycleDto,
     @Req() req: AuthRequest,
   ): Promise<CycleResponse> {
-    const result = createCycleSchema.safeParse(body);
-    if (!result.success) throw new BadRequestException(result.error.flatten());
-    return this.gamificationService.createCycle(req.jwtData.sub, result.data);
+    return this.gamificationService.createCycle(req.jwtData.sub, body);
   }
 
   @Patch(':id/close')
@@ -69,18 +76,21 @@ export class GamificationCyclesController {
       rba: [['role', ['assessor', 'presidente']]],
     },
   })
+  @ApiResponse({ status: 200, type: CycleResponseDto })
   close(@Param('id') id: string): Promise<CycleResponse> {
     return this.gamificationService.closeCycle(id);
   }
 
   @Get('active')
   @RoutePolicy({ access: { mode: 'authenticated' } })
+  @ApiResponse({ status: 200, type: CycleResponseDto })
   getActive(): Promise<CycleResponse> {
     return this.gamificationService.getActiveCycle();
   }
 
   @Get()
   @RoutePolicy({ access: { mode: 'authenticated' } })
+  @ApiResponse({ status: 200, type: [CycleResponseDto] })
   list(): Promise<CycleResponse[]> {
     return this.gamificationService.listCycles();
   }
@@ -101,13 +111,12 @@ export class GamificationTasksController {
       rba: [['role', ['assessor', 'presidente']]],
     },
   })
+  @ApiResponse({ status: 201, type: TaskResponseDto })
   create(
-    @Body() body: unknown,
+    @Body() body: CreateTaskDto,
     @Req() req: AuthRequest,
   ): Promise<TaskResponse> {
-    const result = createTaskSchema.safeParse(body);
-    if (!result.success) throw new BadRequestException(result.error.flatten());
-    return this.gamificationService.createTask(req.jwtData.sub, result.data);
+    return this.gamificationService.createTask(req.jwtData.sub, body);
   }
 
   @Patch(':id')
@@ -117,17 +126,17 @@ export class GamificationTasksController {
       rba: [['role', ['assessor', 'presidente']]],
     },
   })
+  @ApiResponse({ status: 200, type: TaskResponseDto })
   update(
     @Param('id') id: string,
-    @Body() body: unknown,
+    @Body() body: UpdateTaskDto,
   ): Promise<TaskResponse> {
-    const result = updateTaskSchema.safeParse(body);
-    if (!result.success) throw new BadRequestException(result.error.flatten());
-    return this.gamificationService.updateTask(id, result.data);
+    return this.gamificationService.updateTask(id, body);
   }
 
   @Get()
   @RoutePolicy({ access: { mode: 'authenticated' } })
+  @ApiResponse({ status: 200, type: [TaskResponseDto] })
   list(
     @Query('include_inactive') includeInactive: string,
     @Req() req: AuthRequest,
@@ -148,20 +157,17 @@ export class GamificationSubmissionsController {
   @Post()
   @HttpCode(201)
   @RoutePolicy({ access: { mode: 'authenticated' } })
+  @ApiResponse({ status: 201, type: SubmissionResponseDto })
   create(
-    @Body() body: unknown,
+    @Body() body: CreateSubmissionDto,
     @Req() req: AuthRequest,
   ): Promise<SubmissionResponse> {
-    const result = createSubmissionSchema.safeParse(body);
-    if (!result.success) throw new BadRequestException(result.error.flatten());
-    return this.gamificationService.createSubmission(
-      req.jwtData.sub,
-      result.data,
-    );
+    return this.gamificationService.createSubmission(req.jwtData.sub, body);
   }
 
   @Get()
   @RoutePolicy({ access: { mode: 'authenticated' } })
+  @ApiResponse({ status: 200, type: [SubmissionResponseDto] })
   list(
     @Query('status') status: string,
     @Query('user_id') userId: string,
@@ -182,18 +188,13 @@ export class GamificationSubmissionsController {
       rba: [['role', ['assessor', 'presidente']]],
     },
   })
+  @ApiResponse({ status: 200, type: SubmissionResponseDto })
   review(
     @Param('id') id: string,
-    @Body() body: unknown,
+    @Body() body: ReviewSubmissionDto,
     @Req() req: AuthRequest,
   ): Promise<SubmissionResponse> {
-    const result = reviewSubmissionSchema.safeParse(body);
-    if (!result.success) throw new BadRequestException(result.error.flatten());
-    return this.gamificationService.reviewSubmission(
-      id,
-      req.jwtData.sub,
-      result.data,
-    );
+    return this.gamificationService.reviewSubmission(id, req.jwtData.sub, body);
   }
 }
 
@@ -206,6 +207,7 @@ export class GamificationLeaderboardController {
 
   @Get('podium')
   @RoutePolicy({ access: { mode: 'authenticated' } })
+  @ApiResponse({ status: 200, type: [PodiumEntryDto] })
   getPodium(
     @Query('house_id') houseId: string,
     @Query('cycle_id') cycleId: string,
@@ -216,6 +218,7 @@ export class GamificationLeaderboardController {
 
   @Get()
   @RoutePolicy({ access: { mode: 'authenticated' } })
+  @ApiResponse({ status: 200, type: [LeaderboardEntryDto] })
   getLeaderboard(
     @Query('cycle_id') cycleId: string,
   ): Promise<LeaderboardEntry[]> {

@@ -1,3 +1,4 @@
+import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 import type { NormSeverity } from '../../norms/dto/norm.dto';
 
@@ -8,13 +9,21 @@ const uuid = z
     'Invalid UUID',
   );
 
-export const createViolationSchema = z.object({
-  user_id: uuid,
-  norm_id: uuid,
-  reason: z.string().optional(),
-});
+export const createViolationSchema = z
+  .object({
+    user_id: uuid,
+    norm_id: uuid,
+    reason: z.string().optional(),
+  })
+  .meta({
+    example: {
+      user_id: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
+      norm_id: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
+      reason: 'Justificativa opcional',
+    },
+  });
 
-export type CreateViolationDto = z.infer<typeof createViolationSchema>;
+export class CreateViolationDto extends createZodDto(createViolationSchema) {}
 
 export type ViolationStatus = 'active' | 'cancelled' | 'expired';
 
@@ -33,47 +42,4 @@ export interface ViolationRow {
   norm_code: string;
   norm_description: string;
   norm_severity: NormSeverity;
-}
-
-export interface ViolationResponse {
-  id: string;
-  user_id: string;
-  norm: {
-    id: string;
-    code: string;
-    description: string;
-    severity: NormSeverity;
-    points: number;
-  };
-  source: 'manual' | 'automatic';
-  reason: string | null;
-  status: ViolationStatus;
-  expires_at: string;
-  cancelled_at: string | null;
-  applied_at: string;
-  created_at: string;
-}
-
-export interface ViolationResponseWithAppliedBy extends ViolationResponse {
-  applied_by: string | null;
-}
-
-export interface ViolationSummary {
-  score: number;
-  active_leves: number;
-  active_moderadas: number;
-  active_graves: number;
-  active_desligamentos: number;
-  at_risk: boolean;
-}
-
-export interface MemberViolationsResponse {
-  user_id: string;
-  violations: ViolationResponse[];
-  summary: ViolationSummary;
-}
-
-export interface MeViolationsResponse {
-  violations: ViolationResponse[];
-  summary: ViolationSummary;
 }

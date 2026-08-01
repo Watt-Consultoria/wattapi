@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -15,7 +14,7 @@ import { RoutePolicyGuard } from '../../common/guards/route-policy.guard';
 import { RoutePolicy } from '../../common/decorators/route-policy.decorator';
 import type { JwtData } from '../../common/guards/jwt.guard';
 import { PushSubscriptionsService } from './push-subscriptions.service';
-import { createPushSubscriptionSchema } from './dto/push-subscription.dto';
+import { CreatePushSubscriptionDto } from './dto/push-subscription.dto';
 
 type AuthRequest = Request & { jwtData: JwtData };
 
@@ -36,14 +35,10 @@ export class PushSubscriptionsController {
   @HttpCode(201)
   @RoutePolicy({ access: { mode: 'authenticated' } })
   register(
-    @Body() body: unknown,
+    @Body() body: CreatePushSubscriptionDto,
     @Req() req: AuthRequest,
   ): Promise<{ id: string }> {
-    const result = createPushSubscriptionSchema.safeParse(body);
-    if (!result.success) {
-      throw new BadRequestException(result.error.flatten());
-    }
-    return this.pushSubscriptionsService.register(req.jwtData.sub, result.data);
+    return this.pushSubscriptionsService.register(req.jwtData.sub, body);
   }
 
   @Delete(':id')

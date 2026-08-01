@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Get,
@@ -11,6 +10,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { ApiResponse } from '@nestjs/swagger';
 import { Request } from 'express';
 import { RoutePolicyGuard } from '../../common/guards/route-policy.guard';
 import { RoutePolicy } from '../../common/decorators/route-policy.decorator';
@@ -18,10 +18,11 @@ import type { JwtData } from '../../common/guards/jwt.guard';
 import type { UserResponse } from '../users/users.service';
 import { ReimbursementsService } from './reimbursements.service';
 import {
-  createReimbursementSchema,
-  updateReimbursementStatusSchema,
+  CreateReimbursementDto,
+  UpdateReimbursementStatusDto,
 } from './dto/reimbursement.dto';
-import type { ReimbursementResponse } from './dto/reimbursement.dto';
+import { ReimbursementResponseDto } from './dto/reimbursement.response.dto';
+import type { ReimbursementResponse } from './dto/reimbursement.response.dto';
 
 type AuthRequest = Request & {
   jwtData: JwtData;
@@ -36,19 +37,17 @@ export class ReimbursementsController {
   @Post()
   @HttpCode(201)
   @RoutePolicy({ access: { mode: 'authenticated' } })
+  @ApiResponse({ status: 201, type: ReimbursementResponseDto })
   create(
-    @Body() body: unknown,
+    @Body() body: CreateReimbursementDto,
     @Req() req: AuthRequest,
   ): Promise<ReimbursementResponse> {
-    const result = createReimbursementSchema.safeParse(body);
-    if (!result.success) {
-      throw new BadRequestException(result.error.flatten());
-    }
-    return this.reimbursementsService.create(req.jwtData.sub, result.data);
+    return this.reimbursementsService.create(req.jwtData.sub, body);
   }
 
   @Get()
   @RoutePolicy({ access: { mode: 'authenticated' } })
+  @ApiResponse({ status: 200, type: [ReimbursementResponseDto] })
   findAll(
     @Query('target') target = 'me',
     @Req() req: AuthRequest,
@@ -58,6 +57,7 @@ export class ReimbursementsController {
 
   @Get(':user_id')
   @RoutePolicy({ access: { mode: 'authenticated' } })
+  @ApiResponse({ status: 200, type: [ReimbursementResponseDto] })
   findByUser(
     @Param('user_id') userId: string,
     @Req() req: AuthRequest,
@@ -69,14 +69,11 @@ export class ReimbursementsController {
   @RoutePolicy({
     access: { mode: 'authenticated', rba: [['role', ['presidente']]] },
   })
+  @ApiResponse({ status: 200, type: ReimbursementResponseDto })
   updateStatus(
     @Param('id') id: string,
-    @Body() body: unknown,
+    @Body() body: UpdateReimbursementStatusDto,
   ): Promise<ReimbursementResponse> {
-    const result = updateReimbursementStatusSchema.safeParse(body);
-    if (!result.success) {
-      throw new BadRequestException(result.error.flatten());
-    }
-    return this.reimbursementsService.updateStatus(id, result.data);
+    return this.reimbursementsService.updateStatus(id, body);
   }
 }

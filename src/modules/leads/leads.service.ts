@@ -21,11 +21,20 @@ import type {
   LeadRow,
   ContactRow,
   CommentRow,
+} from './dto/lead.dto';
+import type {
   LeadResponse,
   LeadDetailResponse,
   ContactResponse,
   CommentResponse,
-} from './dto/lead.dto';
+} from './dto/lead.response.dto';
+
+export type {
+  LeadResponse,
+  LeadDetailResponse,
+  ContactResponse,
+  CommentResponse,
+};
 
 @Injectable()
 export class LeadsService {

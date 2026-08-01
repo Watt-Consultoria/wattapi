@@ -64,7 +64,17 @@ describe('POST /users', () => {
         },
         body: JSON.stringify({ sector: 'projetos', cpf: '11122200099' }),
       });
+      const body = (await response.json()) as {
+        formErrors: string[];
+        fieldErrors: Record<string, string[]>;
+      };
+
+      // Baseline (pre-migration) 400 error shape — must survive the
+      // ZodValidationPipe migration unchanged (see design.md Decisão 2).
       expect(response.status).toBe(400);
+      expect(Array.isArray(body.formErrors)).toBe(true);
+      expect(Array.isArray(body.fieldErrors.name)).toBe(true);
+      expect(body.fieldErrors.name.length).toBeGreaterThan(0);
     });
 
     test('Attempting to create a profile with invalid sector', async () => {
