@@ -8,8 +8,8 @@ import type {
   CreatePortfolioItemDto,
   UpdatePortfolioItemDto,
   PortfolioItemRow,
-  PortfolioItemResponse,
 } from './dto/portfolio.dto';
+import type { PortfolioItemResponse } from './dto/portfolio.response.dto';
 
 @Injectable()
 export class PortfolioService {

@@ -5,18 +5,9 @@ import {
 } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import { CreateUserDto, UpdateUserDto } from './dto/create-user.dto';
+import type { UserResponse } from './dto/user.response.dto';
 
-export interface UserResponse {
-  id: string;
-  email: string;
-  name: string;
-  role: string;
-  sector: string;
-  cpf: string;
-  house_id: string | null;
-  created_at: string;
-  updated_at: string;
-}
+export type { UserResponse };
 
 interface UserRow {
   id: string;

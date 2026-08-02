@@ -1,3 +1,4 @@
+import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
 const timeRegex = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -14,7 +15,19 @@ export const createActivitySchema = z
   .refine((d) => d.time_end > d.time_start, {
     message: 'time_end must be after time_start',
     path: ['time_end'],
+  })
+  .meta({
+    example: {
+      name: 'Prova de Sistemas Digitais',
+      description: 'Prova da Segunda Unidade',
+      date: '2026-05-29',
+      time_start: '09:00',
+      time_end: '10:00',
+      priority: 'alta',
+    },
   });
+
+export class CreateActivityDto extends createZodDto(createActivitySchema) {}
 
 export const updateActivitySchema = z
   .object({
@@ -34,10 +47,19 @@ export const updateActivitySchema = z
       return true;
     },
     { message: 'time_end must be after time_start', path: ['time_end'] },
-  );
+  )
+  .meta({
+    example: {
+      name: 'Novo nome',
+      description: 'Nova descrição',
+      date: '2026-06-01',
+      time_start: '10:00',
+      time_end: '11:30',
+      priority: 'media',
+    },
+  });
 
-export type CreateActivityDto = z.infer<typeof createActivitySchema>;
-export type UpdateActivityDto = z.infer<typeof updateActivitySchema>;
+export class UpdateActivityDto extends createZodDto(updateActivitySchema) {}
 
 export interface ActivityRow {
   id: string;
@@ -51,20 +73,6 @@ export interface ActivityRow {
   priority: 'alta' | 'media' | 'baixa';
   created_at: Date;
   updated_at: Date;
-}
-
-export interface ActivityResponse {
-  id: string;
-  user_id: string;
-  user_name: string;
-  name: string;
-  description: string | null;
-  date: string;
-  time_start: string;
-  time_end: string;
-  priority: 'alta' | 'media' | 'baixa';
-  created_at: string;
-  updated_at: string;
 }
 
 export interface ActivityFilters {

@@ -18,14 +18,16 @@ import type { UserResponse } from '../users/users.service';
 import type { NormSeverity } from '../norms/dto/norm.dto';
 import type {
   CreateViolationDto,
+  ViolationRow,
+  ViolationStatus,
+} from './dto/violation.dto';
+import type {
   MeViolationsResponse,
   MemberViolationsResponse,
   ViolationResponse,
   ViolationResponseWithAppliedBy,
-  ViolationRow,
-  ViolationStatus,
   ViolationSummary,
-} from './dto/violation.dto';
+} from './dto/violation.response.dto';
 
 const SEVERITY_POINTS: Record<NormSeverity, number> = {
   leve: 1,

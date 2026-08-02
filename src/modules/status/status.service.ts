@@ -1,17 +1,8 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
+import type { StatusResponse } from './dto/status.response.dto';
 
-export interface DatabaseStatus {
-  max_connections: number;
-  opened_connections: number;
-}
-
-export interface StatusResponse {
-  updated_at: string;
-  dependencies: {
-    database: DatabaseStatus;
-  };
-}
+export type { StatusResponse };
 
 @Injectable()
 export class StatusService {

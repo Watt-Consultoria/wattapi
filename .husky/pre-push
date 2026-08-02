@@ -1,1 +1,2 @@
+npm run docs:check
 npm run test

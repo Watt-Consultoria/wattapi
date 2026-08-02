@@ -14,7 +14,7 @@ import type {
   SummaryResponse,
   TimeEntriesListResponse,
   ValidSession,
-} from './dto/time-tracking.dto';
+} from './dto/time-tracking.response.dto';
 
 const MAX_DURATION_MINUTES = 480;
 

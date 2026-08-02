@@ -4,16 +4,12 @@ import { SettingsService } from '../settings/settings.service';
 import { EmailService } from '../email/email.service';
 import { newViolationEmail } from '../../common/email/NewViolationEmail';
 import type { NormSeverity } from '../norms/dto/norm.dto';
+import type {
+  WeeklyJobResult,
+  DailyJobResult,
+} from './dto/internal.response.dto';
 
-export type WeeklyJobResult = {
-  week_start: string;
-  users_checked: number;
-  violations_applied: number;
-};
-
-export type DailyJobResult = {
-  notifications_created: number;
-};
+export type { WeeklyJobResult, DailyJobResult };
 
 interface ActiveUser {
   id: string;

@@ -12,6 +12,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { ApiResponse } from '@nestjs/swagger';
 import { Request } from 'express';
 import { RoutePolicyGuard } from '../../common/guards/route-policy.guard';
 import { RoutePolicy } from '../../common/decorators/route-policy.decorator';
@@ -19,8 +20,9 @@ import { getRank, getVisibleSectors } from '../../common/guards/role-hierarchy';
 import type { JwtData } from '../../common/guards/jwt.guard';
 import type { UserResponse } from '../users/users.service';
 import { ActivitiesService } from './activities.service';
-import { createActivitySchema, updateActivitySchema } from './dto/activity.dto';
-import type { ActivityResponse } from './dto/activity.dto';
+import { CreateActivityDto, UpdateActivityDto } from './dto/activity.dto';
+import { ActivityResponseDto } from './dto/activity.response.dto';
+import type { ActivityResponse } from './dto/activity.response.dto';
 
 type AuthRequest = Request & {
   jwtData: JwtData;
@@ -35,19 +37,17 @@ export class ActivitiesController {
   @Post()
   @HttpCode(201)
   @RoutePolicy({ access: { mode: 'authenticated' } })
+  @ApiResponse({ status: 201, type: ActivityResponseDto })
   create(
-    @Body() body: unknown,
+    @Body() body: CreateActivityDto,
     @Req() req: AuthRequest,
   ): Promise<ActivityResponse> {
-    const result = createActivitySchema.safeParse(body);
-    if (!result.success) {
-      throw new BadRequestException(result.error.flatten());
-    }
-    return this.activitiesService.create(req.jwtData.sub, result.data);
+    return this.activitiesService.create(req.jwtData.sub, body);
   }
 
   @Get('me')
   @RoutePolicy({ access: { mode: 'authenticated' } })
+  @ApiResponse({ status: 200, type: [ActivityResponseDto] })
   findOwn(
     @Req() req: AuthRequest,
     @Query('date') date?: string,
@@ -65,6 +65,7 @@ export class ActivitiesController {
 
   @Get()
   @RoutePolicy({ access: { mode: 'authenticated' } })
+  @ApiResponse({ status: 200, type: [ActivityResponseDto] })
   findAll(
     @Req() req: AuthRequest,
     @Query('date') date?: string,
@@ -83,19 +84,16 @@ export class ActivitiesController {
 
   @Patch(':id')
   @RoutePolicy({ access: { mode: 'authenticated' } })
+  @ApiResponse({ status: 200, type: ActivityResponseDto })
   update(
     @Param('id') id: string,
-    @Body() body: unknown,
+    @Body() body: UpdateActivityDto,
     @Req() req: AuthRequest,
   ): Promise<ActivityResponse> {
-    const result = updateActivitySchema.safeParse(body);
-    if (!result.success) {
-      throw new BadRequestException(result.error.flatten());
-    }
-    if (Object.keys(result.data).length === 0) {
+    if (Object.keys(body).length === 0) {
       throw new BadRequestException('At least one field must be provided');
     }
-    return this.activitiesService.update(id, req.jwtData.sub, result.data);
+    return this.activitiesService.update(id, req.jwtData.sub, body);
   }
 
   @Delete(':id')

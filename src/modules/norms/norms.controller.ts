@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -10,11 +9,13 @@ import {
   Put,
   UseGuards,
 } from '@nestjs/common';
+import { ApiResponse } from '@nestjs/swagger';
 import { RoutePolicyGuard } from '../../common/guards/route-policy.guard';
 import { RoutePolicy } from '../../common/decorators/route-policy.decorator';
 import { NormsService } from './norms.service';
-import { createNormSchema, updateNormSchema } from './dto/norm.dto';
-import type { NormResponse } from './dto/norm.dto';
+import { CreateNormDto, UpdateNormDto } from './dto/norm.dto';
+import { NormResponseDto } from './dto/norm.response.dto';
+import type { NormResponse } from './dto/norm.response.dto';
 
 @Controller('norms')
 @UseGuards(RoutePolicyGuard)
@@ -23,6 +24,7 @@ export class NormsController {
 
   @Get()
   @RoutePolicy({ access: { mode: 'authenticated' } })
+  @ApiResponse({ status: 200, type: [NormResponseDto] })
   findAll(): Promise<NormResponse[]> {
     return this.normsService.findAll();
   }
@@ -35,12 +37,9 @@ export class NormsController {
       rba: [['role', ['assessor', 'presidente']]],
     },
   })
-  create(@Body() body: unknown): Promise<NormResponse> {
-    const result = createNormSchema.safeParse(body);
-    if (!result.success) {
-      throw new BadRequestException(result.error.flatten());
-    }
-    return this.normsService.create(result.data);
+  @ApiResponse({ status: 201, type: NormResponseDto })
+  create(@Body() body: CreateNormDto): Promise<NormResponse> {
+    return this.normsService.create(body);
   }
 
   @Put(':id')
@@ -50,15 +49,12 @@ export class NormsController {
       rba: [['role', ['assessor', 'presidente']]],
     },
   })
+  @ApiResponse({ status: 200, type: NormResponseDto })
   update(
     @Param('id') id: string,
-    @Body() body: unknown,
+    @Body() body: UpdateNormDto,
   ): Promise<NormResponse> {
-    const result = updateNormSchema.safeParse(body);
-    if (!result.success) {
-      throw new BadRequestException(result.error.flatten());
-    }
-    return this.normsService.update(id, result.data);
+    return this.normsService.update(id, body);
   }
 
   @Delete(':id')

@@ -6,9 +6,9 @@ import {
 import { DatabaseService } from '../../database/database.service';
 import type {
   CreateNotificationDto,
-  NotificationResponse,
   NotificationRow,
 } from './dto/notification.dto';
+import type { NotificationResponse } from './dto/notification.response.dto';
 
 function toResponse(row: NotificationRow): NotificationResponse {
   return {

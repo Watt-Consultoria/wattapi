@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -10,6 +9,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { ApiResponse } from '@nestjs/swagger';
 import { Request } from 'express';
 import { RoutePolicyGuard } from '../../common/guards/route-policy.guard';
 import { RoutePolicy } from '../../common/decorators/route-policy.decorator';
@@ -17,8 +17,9 @@ import { getRank } from '../../common/guards/role-hierarchy';
 import type { JwtData } from '../../common/guards/jwt.guard';
 import type { UserResponse } from '../users/users.service';
 import { NotificationsService } from './notifications.service';
-import { createNotificationSchema } from './dto/notification.dto';
-import type { NotificationResponse } from './dto/notification.dto';
+import { CreateNotificationDto } from './dto/notification.dto';
+import { NotificationResponseDto } from './dto/notification.response.dto';
+import type { NotificationResponse } from './dto/notification.response.dto';
 
 type AuthRequest = Request & {
   jwtData: JwtData;
@@ -32,6 +33,7 @@ export class NotificationsController {
 
   @Get()
   @RoutePolicy({ access: { mode: 'authenticated' } })
+  @ApiResponse({ status: 200, type: [NotificationResponseDto] })
   findAll(@Req() req: AuthRequest): Promise<NotificationResponse[]> {
     return this.notificationsService.findAll(req.jwtData.sub);
   }
@@ -47,18 +49,14 @@ export class NotificationsController {
   @HttpCode(201)
   @RoutePolicy({ access: { mode: 'authenticated' } })
   create(
-    @Body() body: unknown,
+    @Body() body: CreateNotificationDto,
     @Req() req: AuthRequest,
   ): Promise<{ count: number }> {
-    const result = createNotificationSchema.safeParse(body);
-    if (!result.success) {
-      throw new BadRequestException(result.error.flatten());
-    }
     const rank = getRank(req.user.role);
     return this.notificationsService.createDirected(
       req.jwtData.sub,
       rank,
-      result.data,
+      body,
     );
   }
 }

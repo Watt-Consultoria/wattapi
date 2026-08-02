@@ -1,20 +1,52 @@
+import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
 const daySlots = z.array(z.boolean()).length(14);
 
-export const upsertRoutineSchema = z.object({
-  slots: z.object({
-    mon: daySlots,
-    tue: daySlots,
-    wed: daySlots,
-    thu: daySlots,
-    fri: daySlots,
-    sat: daySlots,
-    sun: daySlots,
-  }),
-});
+const exampleDaySlots = [
+  true,
+  false,
+  true,
+  false,
+  false,
+  false,
+  false,
+  false,
+  false,
+  false,
+  false,
+  false,
+  false,
+  false,
+];
 
-export type UpsertRoutineDto = z.infer<typeof upsertRoutineSchema>;
+export const upsertRoutineSchema = z
+  .object({
+    slots: z.object({
+      mon: daySlots,
+      tue: daySlots,
+      wed: daySlots,
+      thu: daySlots,
+      fri: daySlots,
+      sat: daySlots,
+      sun: daySlots,
+    }),
+  })
+  .meta({
+    example: {
+      slots: {
+        mon: exampleDaySlots,
+        tue: exampleDaySlots,
+        wed: exampleDaySlots,
+        thu: exampleDaySlots,
+        fri: exampleDaySlots,
+        sat: exampleDaySlots,
+        sun: exampleDaySlots,
+      },
+    },
+  });
+
+export class UpsertRoutineDto extends createZodDto(upsertRoutineSchema) {}
 
 export type DayKey = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
 

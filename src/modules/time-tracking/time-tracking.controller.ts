@@ -10,6 +10,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { ApiExtraModels, ApiResponse, getSchemaPath } from '@nestjs/swagger';
 import { Request } from 'express';
 import { RoutePolicyGuard } from '../../common/guards/route-policy.guard';
 import { RoutePolicy } from '../../common/decorators/route-policy.decorator';
@@ -17,12 +18,19 @@ import { isSuperuser } from '../../common/guards/role-hierarchy';
 import type { JwtData } from '../../common/guards/jwt.guard';
 import type { UserResponse } from '../users/users.service';
 import { TimeTrackingService } from './time-tracking.service';
+import {
+  ClockInResponseDto,
+  ClockOutValidResponseDto,
+  ClockOutAnnulledResponseDto,
+  SummaryResponseDto,
+  TimeEntriesListResponseDto,
+} from './dto/time-tracking.response.dto';
 import type {
   ClockInResponse,
   ClockOutResponse,
   SummaryResponse,
   TimeEntriesListResponse,
-} from './dto/time-tracking.dto';
+} from './dto/time-tracking.response.dto';
 
 type PolicyRequest = Request & {
   jwtData: JwtData;
@@ -36,6 +44,7 @@ export class TimeTrackingController {
 
   @Get()
   @RoutePolicy({ access: { mode: 'authenticated' } })
+  @ApiResponse({ status: 200, type: TimeEntriesListResponseDto })
   listWeeklySummary(
     @Req() req: PolicyRequest,
     @Query('week') week = '0',
@@ -59,6 +68,7 @@ export class TimeTrackingController {
   @Post('clock-in')
   @HttpCode(201)
   @RoutePolicy({ access: { mode: 'authenticated' } })
+  @ApiResponse({ status: 201, type: ClockInResponseDto })
   clockIn(@Req() req: PolicyRequest): Promise<ClockInResponse> {
     return this.timeTrackingService.clockIn(req.jwtData.sub);
   }
@@ -66,12 +76,23 @@ export class TimeTrackingController {
   @Post('clock-out')
   @HttpCode(200)
   @RoutePolicy({ access: { mode: 'authenticated' } })
+  @ApiExtraModels(ClockOutValidResponseDto, ClockOutAnnulledResponseDto)
+  @ApiResponse({
+    status: 200,
+    schema: {
+      oneOf: [
+        { $ref: getSchemaPath(ClockOutValidResponseDto) },
+        { $ref: getSchemaPath(ClockOutAnnulledResponseDto) },
+      ],
+    },
+  })
   clockOut(@Req() req: PolicyRequest): Promise<ClockOutResponse> {
     return this.timeTrackingService.clockOut(req.jwtData.sub);
   }
 
   @Get('summary/me')
   @RoutePolicy({ access: { mode: 'authenticated' } })
+  @ApiResponse({ status: 200, type: SummaryResponseDto })
   summaryMe(@Req() req: PolicyRequest): Promise<SummaryResponse> {
     const requesterId = req.jwtData.sub;
     const requesterRole = req.user.role;
@@ -84,6 +105,7 @@ export class TimeTrackingController {
 
   @Get('summary/:userId')
   @RoutePolicy({ access: { mode: 'authenticated' } })
+  @ApiResponse({ status: 200, type: SummaryResponseDto })
   summaryByUserId(
     @Req() req: PolicyRequest,
     @Param('userId') userId: string,

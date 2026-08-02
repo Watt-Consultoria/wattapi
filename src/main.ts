@@ -1,11 +1,19 @@
 import { NestFactory } from '@nestjs/core';
+import { SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { EnvService } from './config/env.service';
+import { ZodValidationPipe } from './common/pipes/zod-validation.pipe';
+import { buildOpenApiDocument } from './common/openapi/build-document';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     logger: ['log', 'error', 'warn'],
   });
+
+  app.useGlobalPipes(new ZodValidationPipe());
+
+  const openApiDocument = buildOpenApiDocument(app);
+  SwaggerModule.setup('docs', app, openApiDocument);
 
   const envService = app.get(EnvService);
   const PORT = envService.get('PORT');

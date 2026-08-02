@@ -6,11 +6,11 @@ import {
 import { DatabaseService } from '../../database/database.service';
 import type {
   ActivityFilters,
-  ActivityResponse,
   ActivityRow,
   CreateActivityDto,
   UpdateActivityDto,
 } from './dto/activity.dto';
+import type { ActivityResponse } from './dto/activity.response.dto';
 
 function toResponse(row: ActivityRow): ActivityResponse {
   return {

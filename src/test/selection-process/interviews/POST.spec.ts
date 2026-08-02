@@ -3,8 +3,13 @@ import orchestrator from '../../orchestrator';
 const BASE_URL = 'http://localhost:3001/selection-process/interviews';
 
 // Valid future times: 08:00 BRT = 11:00 UTC, 09:00 BRT = 12:00 UTC
-const VALID_SLOT_1 = '2026-08-01T11:00:00Z';
-const VALID_SLOT_2 = '2026-08-01T12:00:00Z';
+const VALID_HOUR_1 = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30);
+const VALID_HOUR_2 = new Date(Date.now() + 1000 * 60 * 60 * 24 * 31);
+VALID_HOUR_1.setUTCHours(11, 0, 0, 0);
+VALID_HOUR_2.setUTCHours(12, 0, 0, 0);
+
+const VALID_SLOT_1 = VALID_HOUR_1.toISOString();
+const VALID_SLOT_2 = VALID_HOUR_2.toISOString();
 
 type InterviewSlotResponse = {
   id: string;
@@ -44,6 +49,10 @@ describe('POST /selection-process/interviews', () => {
         body: JSON.stringify({ slots: [VALID_SLOT_1, VALID_SLOT_2] }),
       });
       const body = (await response.json()) as InterviewSlotResponse[];
+
+      console.log('Response body:', body);
+
+      jest.useRealTimers();
 
       expect(response.status).toBe(201);
       expect(Array.isArray(body)).toBe(true);

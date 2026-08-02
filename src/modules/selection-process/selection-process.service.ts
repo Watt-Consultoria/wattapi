@@ -33,11 +33,6 @@ import type {
   ApplicationRow,
   StageRow,
   CandidateRow,
-  SelectionProcessResponse,
-  ApplicationResponse,
-  ApplicationCreatedResponse,
-  StageResponse,
-  CandidateResponse,
   CreateInterviewSlotsDto,
   BookInterviewSlotDto,
   SendInterviewLinksDto,
@@ -47,16 +42,27 @@ import type {
   InterviewBookingRow,
   InterviewTokenRow,
   InterviewEvaluationRow,
+  SendEmailToCandidatesDto,
+} from './dto/selection-process.dto';
+import type { SelectionProcessResponse } from './dto/selection-process.response.dto';
+import type {
+  ApplicationResponse,
+  ApplicationCreatedResponse,
+} from './dto/application.response.dto';
+import type { StageResponse } from './dto/stage.response.dto';
+import type { CandidateResponse } from './dto/candidate.response.dto';
+import type {
   InterviewSlotResponse,
   AvailableTimeSlotResponse,
   InterviewBookingResponse,
-  InterviewEvaluationResponse,
-  InterviewEvaluationWithCandidateResponse,
   MySlotResponse,
   SendLinksResult,
-  SendEmailToCandidatesDto,
   SendEmailResult,
-} from './dto/selection-process.dto';
+} from './dto/interview.response.dto';
+import type {
+  InterviewEvaluationResponse,
+  InterviewEvaluationWithCandidateResponse,
+} from './dto/interview-evaluation.response.dto';
 
 const BUCKET = 'selection-process-files';
 

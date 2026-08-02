@@ -7,19 +7,29 @@ import {
 import { DatabaseService } from '../../database/database.service';
 import type {
   CycleRow,
-  CycleResponse,
   TaskRow,
-  TaskResponse,
   SubmissionRow,
-  SubmissionResponse,
   CreateCycleDto,
   CreateTaskDto,
   UpdateTaskDto,
   CreateSubmissionDto,
   ReviewSubmissionDto,
+} from './dto/gamification.dto';
+import type {
+  CycleResponse,
+  TaskResponse,
+  SubmissionResponse,
   LeaderboardEntry,
   PodiumEntry,
-} from './dto/gamification.dto';
+} from './dto/gamification.response.dto';
+
+export type {
+  CycleResponse,
+  TaskResponse,
+  SubmissionResponse,
+  LeaderboardEntry,
+  PodiumEntry,
+};
 
 const BUCKET = 'gamification-proofs';
 
