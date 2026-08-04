@@ -80,6 +80,15 @@ async function clearDatabase(): Promise<void> {
   await p.query('DELETE FROM time_entries');
   await p.query('DELETE FROM routine_slots');
   await p.query('DELETE FROM reimbursements');
+  await p.query('DELETE FROM project_feedback');
+  await p.query('DELETE FROM project_reviews');
+  await p.query('DELETE FROM stage_review_reworks');
+  await p.query('DELETE FROM stage_reviews');
+  await p.query('DELETE FROM stage_submission_files');
+  await p.query('DELETE FROM stage_submissions');
+  await p.query('DELETE FROM project_stage_deliverables');
+  await p.query('DELETE FROM project_stages');
+  await p.query('DELETE FROM projects');
   await p.query('DELETE FROM lead_comments');
   await p.query('DELETE FROM lead_contacts');
   await p.query('DELETE FROM leads');
@@ -973,6 +982,314 @@ async function createInterviewBooking({
   return rows[0];
 }
 
+export interface CreatedProject {
+  id: string;
+  lead_id: string;
+  project_type_id: string;
+  name: string;
+  description: string | null;
+  delivery_date: string;
+  status: string;
+  created_by: string;
+}
+
+async function createProject({
+  lead_id,
+  project_type_id,
+  name = 'Projeto Teste',
+  description = null,
+  delivery_date = '2027-01-01',
+  status = 'em_andamento',
+  created_by,
+}: {
+  lead_id: string;
+  project_type_id: string;
+  name?: string;
+  description?: string | null;
+  delivery_date?: string;
+  status?: string;
+  created_by: string;
+}): Promise<CreatedProject> {
+  const { rows } = await getPool().query<CreatedProject>(
+    `INSERT INTO projects (lead_id, project_type_id, name, description, delivery_date, status, created_by)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
+     RETURNING id, lead_id, project_type_id, name, description,
+               to_char(delivery_date, 'YYYY-MM-DD') AS delivery_date, status, created_by`,
+    [
+      lead_id,
+      project_type_id,
+      name,
+      description,
+      delivery_date,
+      status,
+      created_by,
+    ],
+  );
+  return rows[0];
+}
+
+export interface CreatedProjectStageDeliverable {
+  id: string;
+  stage_id: string;
+  name: string;
+  description: string;
+}
+
+export interface CreatedProjectStage {
+  id: string;
+  project_id: string;
+  delivery_date: string;
+  deadline_date: string;
+  name: string;
+  description: string;
+  position: number;
+  consultant_id: string;
+  status: string;
+  created_by: string;
+  deliverables: CreatedProjectStageDeliverable[];
+}
+
+async function createProjectStage({
+  project_id,
+  delivery_date = '2026-12-01',
+  deadline_date = '2026-12-15',
+  name = 'Etapa Teste',
+  description = 'Descrição da etapa de teste',
+  position = 1,
+  consultant_id,
+  status = 'pendente',
+  created_by,
+  deliverables = [
+    { name: 'Documento', description: 'Documento entregável de teste' },
+  ],
+}: {
+  project_id: string;
+  delivery_date?: string;
+  deadline_date?: string;
+  name?: string;
+  description?: string;
+  position?: number;
+  consultant_id: string;
+  status?: string;
+  created_by: string;
+  deliverables?: Array<{ name: string; description: string }>;
+}): Promise<CreatedProjectStage> {
+  const p = getPool();
+  const { rows } = await p.query<
+    Omit<
+      CreatedProjectStage,
+      'deliverables' | 'delivery_date' | 'deadline_date'
+    > & {
+      delivery_date: string;
+      deadline_date: string;
+    }
+  >(
+    `INSERT INTO project_stages (project_id, delivery_date, deadline_date, name, description, position, consultant_id, status, created_by)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+     RETURNING id, project_id, to_char(delivery_date, 'YYYY-MM-DD') AS delivery_date,
+               to_char(deadline_date, 'YYYY-MM-DD') AS deadline_date, name, description,
+               position, consultant_id, status, created_by`,
+    [
+      project_id,
+      delivery_date,
+      deadline_date,
+      name,
+      description,
+      position,
+      consultant_id,
+      status,
+      created_by,
+    ],
+  );
+  const stage = rows[0];
+
+  const createdDeliverables: CreatedProjectStageDeliverable[] = [];
+  for (const d of deliverables) {
+    const { rows: dRows } = await p.query<CreatedProjectStageDeliverable>(
+      `INSERT INTO project_stage_deliverables (stage_id, name, description)
+       VALUES ($1, $2, $3)
+       RETURNING id, stage_id, name, description`,
+      [stage.id, d.name, d.description],
+    );
+    createdDeliverables.push(dRows[0]);
+  }
+
+  return { ...stage, deliverables: createdDeliverables };
+}
+
+export interface CreatedStageSubmissionFile {
+  id: string;
+  submission_id: string;
+  deliverable_id: string;
+  path: string;
+  name: string;
+}
+
+export interface CreatedStageSubmission {
+  id: string;
+  stage_id: string;
+  notes: string | null;
+  attempt: number;
+  submitted_by: string;
+  files: CreatedStageSubmissionFile[];
+}
+
+async function createStageSubmission({
+  stage_id,
+  notes = null,
+  attempt = 1,
+  submitted_by,
+  files = [],
+}: {
+  stage_id: string;
+  notes?: string | null;
+  attempt?: number;
+  submitted_by: string;
+  files?: Array<{ deliverable_id: string; path: string; name: string }>;
+}): Promise<CreatedStageSubmission> {
+  const p = getPool();
+  const { rows } = await p.query<Omit<CreatedStageSubmission, 'files'>>(
+    `INSERT INTO stage_submissions (stage_id, notes, attempt, submitted_by)
+     VALUES ($1, $2, $3, $4)
+     RETURNING id, stage_id, notes, attempt, submitted_by`,
+    [stage_id, notes, attempt, submitted_by],
+  );
+  const submission = rows[0];
+
+  const createdFiles: CreatedStageSubmissionFile[] = [];
+  for (const f of files) {
+    const { rows: fRows } = await p.query<CreatedStageSubmissionFile>(
+      `INSERT INTO stage_submission_files (submission_id, deliverable_id, path, name)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id, submission_id, deliverable_id, path, name`,
+      [submission.id, f.deliverable_id, f.path, f.name],
+    );
+    createdFiles.push(fRows[0]);
+  }
+
+  return { ...submission, files: createdFiles };
+}
+
+export interface CreatedStageReview {
+  id: string;
+  submission_id: string;
+  approved: boolean;
+  notes: string | null;
+  new_delivery_date: string | null;
+  reviewed_by: string;
+}
+
+async function createStageReview({
+  submission_id,
+  approved,
+  notes = null,
+  new_delivery_date = null,
+  reviewed_by,
+  deliverable_ids = [],
+}: {
+  submission_id: string;
+  approved: boolean;
+  notes?: string | null;
+  new_delivery_date?: string | null;
+  reviewed_by: string;
+  deliverable_ids?: string[];
+}): Promise<CreatedStageReview> {
+  const p = getPool();
+  const { rows } = await p.query<
+    Omit<CreatedStageReview, 'new_delivery_date'> & {
+      new_delivery_date: string | null;
+    }
+  >(
+    `INSERT INTO stage_reviews (submission_id, approved, notes, new_delivery_date, reviewed_by)
+     VALUES ($1, $2, $3, $4, $5)
+     RETURNING id, submission_id, approved, notes,
+               to_char(new_delivery_date, 'YYYY-MM-DD') AS new_delivery_date, reviewed_by`,
+    [submission_id, approved, notes, new_delivery_date, reviewed_by],
+  );
+  const review = rows[0];
+
+  for (const deliverableId of deliverable_ids) {
+    await p.query(
+      `INSERT INTO stage_review_reworks (review_id, deliverable_id) VALUES ($1, $2)`,
+      [review.id, deliverableId],
+    );
+  }
+
+  return review;
+}
+
+export interface CreatedProjectReview {
+  id: string;
+  project_id: string;
+  round: number;
+  approved: boolean;
+  notes: string;
+  reviewer_id: string;
+}
+
+async function createProjectReview({
+  project_id,
+  round = 1,
+  approved,
+  notes = 'Notas de revisão de teste',
+  reviewer_id,
+}: {
+  project_id: string;
+  round?: number;
+  approved: boolean;
+  notes?: string;
+  reviewer_id: string;
+}): Promise<CreatedProjectReview> {
+  const { rows } = await getPool().query<CreatedProjectReview>(
+    `INSERT INTO project_reviews (project_id, round, approved, notes, reviewer_id)
+     VALUES ($1, $2, $3, $4, $5)
+     RETURNING id, project_id, round, approved, notes, reviewer_id`,
+    [project_id, round, approved, notes, reviewer_id],
+  );
+  return rows[0];
+}
+
+export interface CreatedProjectFeedback {
+  id: string;
+  project_id: string;
+  consultor_id: string;
+  answers: Record<string, unknown>;
+}
+
+async function createProjectFeedback({
+  project_id,
+  consultor_id,
+  answers = { satisfacao: 'boa' },
+}: {
+  project_id: string;
+  consultor_id: string;
+  answers?: Record<string, unknown>;
+}): Promise<CreatedProjectFeedback> {
+  const { rows } = await getPool().query<CreatedProjectFeedback>(
+    `INSERT INTO project_feedback (project_id, consultor_id, answers)
+     VALUES ($1, $2, $3)
+     RETURNING id, project_id, consultor_id, answers`,
+    [project_id, consultor_id, JSON.stringify(answers)],
+  );
+  return rows[0];
+}
+
+async function uploadProjectStageFile(
+  consultantId: string,
+  filename: string,
+): Promise<string> {
+  const filePath = `stage-files/${consultantId}/${filename}`;
+  const { error } = await getSupabase()
+    .storage.from('project-stage-files')
+    .upload(filePath, Buffer.from('entregável de teste'), {
+      upsert: true,
+      contentType: 'text/plain',
+    });
+
+  if (error) throw new Error(`Storage upload failed: ${error.message}`);
+  return filePath;
+}
+
 async function deleteAllEmails() {
   await fetch(`${emailHttpUrl}/messages`, {
     method: 'DELETE',
@@ -1045,6 +1362,13 @@ export default {
       createInterviewSlot,
       createInterviewToken,
       createInterviewBooking,
+      createProject,
+      createProjectStage,
+      createStageSubmission,
+      createStageReview,
+      createProjectReview,
+      createProjectFeedback,
+      uploadProjectStageFile,
     },
   },
   email: {

@@ -36,6 +36,7 @@
 - [Houses](#houses)
 - [Gamification](#gamification)
 - [Processo Seletivo](#processo-seletivo)
+- [Projects](#projects)
 
 ---
 
@@ -2869,3 +2870,616 @@ Envia um email personalizado (HTML + texto plano) para um conjunto de candidatos
 - `401` — Sem token
 - `403` — Role insuficiente
 - `404` — Algum `candidate_id` não existe
+
+---
+
+## Projects
+
+Gerencia o ciclo de vida de um projeto de consultoria: criação pelo `gerente`, execução em etapas atribuídas a consultores, revisão em dois níveis (gerente → diretor) e fechamento com coleta de feedback.
+
+**Shape de projeto:**
+
+```json
+{
+  "id": "uuid",
+  "lead_id": "uuid",
+  "project_type_id": "uuid",
+  "name": "Projeto Watt",
+  "description": "Descrição do projeto",
+  "delivery_date": "2027-01-01",
+  "closing_notes": null,
+  "closed_by": null,
+  "closed_at": null,
+  "status": "em_andamento",
+  "created_by": "uuid",
+  "created_at": "...",
+  "updated_at": "..."
+}
+```
+
+`status` transita `em_andamento` → `em_revisao` → `revisado` → `finalizado`. Uma vez `finalizado`, o projeto não recebe mais modificações.
+
+**Acesso:**
+- `MANAGER_ACCESS` (criação, gestão de etapas, revisão de submissões): `gerente`, `assessor`, `presidente`
+- `PROJECT_DIRECTOR_ACCESS` (revisão e fechamento de projeto): `diretor` de sector `projetos`, `assessor`, `presidente`
+- Leitura (`GET`): qualquer usuário autenticado, salvo indicado o contrário
+
+---
+
+### `GET /projects/lookups`
+
+Endpoint de **lookup para o modal de criação de projeto** — retorna, em uma única chamada, as três listas de opções necessárias para montar os campos do formulário de `POST /projects`: leads elegíveis, tipos de serviço do portfólio e consultores disponíveis do sector `projetos`. Existe para evitar que o frontend precise de 3 chamadas com regras de acesso diferentes (`GET /leads` é restrito a `LEADS_ACCESS`, que um `gerente` de `projetos` não possui) — este endpoint usa a mesma policy de quem efetivamente cria o projeto.
+
+**Auth:** `MANAGER_ACCESS`
+
+**Resposta 200**
+
+```json
+{
+  "leads": [
+    { "id": "uuid", "company_name": "Empresa X", "status": "em_progresso" }
+  ],
+  "portfolio_items": [
+    { "id": "uuid", "name": "Consultoria Financeira", "description": "..." }
+  ],
+  "consultants": [
+    { "id": "uuid", "name": "João Silva", "email": "joao@watt.com" }
+  ]
+}
+```
+
+| Lista | Critério |
+|-------|----------|
+| `leads` | `leads.status = 'em_progresso'` — único status de lead equivalente a "em andamento" (os outros são `nao_contatado` e `contatado`) |
+| `portfolio_items` | Todos os itens de `portfolio_items` (sem filtro) |
+| `consultants` | `users.role = 'consultor' AND users.sector = 'projetos' AND users.inactive = false` |
+
+> Este endpoint não altera o módulo `leads` nem seu `GET /leads` — é uma view somente-leitura, escopada exatamente para quem tem permissão de criar um projeto.
+
+**Respostas**
+- `200` — As três listas (shape acima)
+- `401` — Sem token
+- `403` — Role insuficiente (apenas `gerente`/superusuário)
+
+---
+
+### `POST /projects`
+
+Cria um novo projeto vinculado a um lead e a um item de portfólio. Use `GET /projects/lookups` para popular os campos `lead_id`, `project_type_id` e o consultor responsável pela primeira etapa do modal de criação.
+
+**Auth:** `MANAGER_ACCESS`
+
+**Body**
+
+```json
+{
+  "lead_id": "uuid",
+  "project_type_id": "uuid",
+  "name": "Projeto Watt",
+  "description": "Descrição do projeto",
+  "delivery_date": "2027-01-01"
+}
+```
+
+| Campo | Tipo | Obrigatório | Descrição |
+|-------|------|-------------|-----------|
+| `lead_id` | UUID | Sim | Deve existir em `leads` |
+| `project_type_id` | UUID | Sim | Deve existir em `portfolio_items` |
+| `name` | string | Sim | Mínimo 1 caractere |
+| `description` | string | Não | |
+| `delivery_date` | date | Sim | `YYYY-MM-DD` |
+
+**Respostas**
+- `201` — Projeto criado com `status: "em_andamento"` (shape de projeto)
+- `400` — Campos obrigatórios ausentes
+- `401` — Sem token
+- `403` — Role insuficiente (apenas `gerente`/superusuário)
+- `404` — `lead_id` ou `project_type_id` não encontrado
+
+---
+
+### `GET /projects`
+
+Lista projetos, ordenados por `created_at DESC`, com filtros opcionais combináveis.
+
+**Auth:** Obrigatória (qualquer usuário)
+
+**Query params**
+
+| Param | Tipo | Descrição |
+|-------|------|-----------|
+| `status` | enum | Filtra por status exato |
+| `lead_id` | UUID | Filtra por lead |
+| `created_by` | UUID | Filtra por gerente que criou o projeto |
+| `consultant_id` | UUID | Filtra projetos com ao menos uma etapa atribuída a este consultor |
+
+**Respostas**
+- `200` — Lista de projetos (shape de projeto)
+- `401` — Sem token
+
+---
+
+### `GET /projects/:id`
+
+Busca um projeto por id.
+
+**Auth:** Obrigatória (qualquer usuário)
+
+**Respostas**
+- `200` — Projeto encontrado (shape de projeto)
+- `401` — Sem token
+- `404` — Projeto não encontrado
+
+---
+
+### `PATCH /projects/:id`
+
+Executa uma das duas transições de status documentadas — não é um editor genérico de campos. Uma vez `finalizado`, o projeto rejeita qualquer `PATCH`.
+
+**Auth:** `MANAGER_ACCESS` (submissão) ou `PROJECT_DIRECTOR_ACCESS` (fechamento) — a validação fina de quem pode fazer qual transição ocorre no service.
+
+**Transição 1 — Gerente submete para revisão (`em_andamento` → `em_revisao`)**
+
+```json
+{ "status": "em_revisao" }
+```
+
+- Apenas o gerente que criou o projeto (ou superusuário) pode submeter.
+- Exige que **todas** as etapas do projeto tenham `status: "concluida"` (e que existam etapas).
+- Notifica todo `diretor` de sector `projetos`.
+
+**Transição 2 — Diretor finaliza o projeto (`revisado` → `finalizado`)**
+
+```json
+{ "status": "finalizado", "closing_notes": "Projeto entregue com sucesso" }
+```
+
+- Apenas `diretor` de sector `projetos` (ou superusuário) pode fechar.
+- `closing_notes` é obrigatório.
+- Define `closed_by` e `closed_at`.
+- Notifica todo consultor distinto atribuído a alguma etapa do projeto, solicitando feedback.
+
+**Respostas**
+- `200` — Projeto atualizado (shape de projeto)
+- `400` — `closing_notes` ausente ao finalizar
+- `401` — Sem token
+- `403` — Requisitante não é o gerente do projeto / não é diretor de projetos
+- `404` — Projeto não encontrado
+- `409` — Transição inválida para o status atual (nem toda etapa `concluida`, projeto sem etapas, projeto já `finalizado`, projeto não está no status de origem esperado)
+
+---
+
+### Etapas do projeto (`project_stages`)
+
+**Shape de etapa:**
+
+```json
+{
+  "id": "uuid",
+  "project_id": "uuid",
+  "delivery_date": "2026-12-01",
+  "deadline_date": "2026-12-15",
+  "name": "Diagnóstico Técnico",
+  "description": "Levantamento técnico inicial",
+  "position": 1,
+  "consultant_id": "uuid",
+  "status": "pendente",
+  "created_by": "uuid",
+  "created_at": "...",
+  "updated_at": "...",
+  "deliverables": [
+    { "id": "uuid", "name": "Relatório", "description": "Relatório de diagnóstico" }
+  ]
+}
+```
+
+`status` transita `pendente` → `em_revisao` → `concluida`, com rejeição retornando a `pendente`.
+
+---
+
+### `POST /projects/:id/stages`
+
+Cria uma nova etapa dentro de um projeto `em_andamento`.
+
+**Auth:** `MANAGER_ACCESS` — apenas o gerente responsável pelo projeto (ou superusuário)
+
+**Body**
+
+```json
+{
+  "delivery_date": "2026-12-01",
+  "deadline_date": "2026-12-15",
+  "name": "Diagnóstico Técnico",
+  "description": "Levantamento técnico inicial",
+  "position": 1,
+  "consultant_id": "uuid",
+  "deliverables": [
+    { "name": "Relatório", "description": "Relatório de diagnóstico" }
+  ]
+}
+```
+
+| Campo | Tipo | Obrigatório | Descrição |
+|-------|------|-------------|-----------|
+| `delivery_date` | date | Sim | Deve ser anterior a `deadline_date` e não posterior à `delivery_date` do projeto |
+| `deadline_date` | date | Sim | |
+| `name` | string | Sim | |
+| `description` | string | Sim | |
+| `position` | integer | Sim | > 0 |
+| `consultant_id` | UUID | Sim | Deve existir em `users` |
+| `deliverables` | array | Sim | Mínimo 1 item, cada um com `name` e `description` |
+
+**Comportamento:** notifica o `consultant_id` atribuído.
+
+**Respostas**
+- `201` — Etapa criada com `status: "pendente"` (shape de etapa)
+- `400` — `delivery_date >= deadline_date`, `delivery_date` posterior à do projeto, ou `deliverables` vazio
+- `401` — Sem token
+- `403` — Requisitante não é o gerente do projeto
+- `404` — Projeto ou `consultant_id` não encontrado
+- `409` — Projeto não está `em_andamento`
+
+---
+
+### `GET /projects/:id/stages`
+
+Lista as etapas de um projeto, ordenadas por `position ASC`, com filtros opcionais combináveis.
+
+**Auth:** Obrigatória (qualquer usuário)
+
+**Query params**
+
+| Param | Tipo | Descrição |
+|-------|------|-----------|
+| `consultant_id` | UUID | Filtra por consultor responsável |
+| `status` | enum | Filtra por status exato |
+
+**Respostas**
+- `200` — Lista de etapas, cada uma com `deliverables` (shape de etapa)
+- `401` — Sem token
+- `404` — Projeto não encontrado
+
+---
+
+### `GET /projects/:id/stages/:stageId`
+
+Busca uma etapa por id, incluindo seu checklist de entregáveis.
+
+**Auth:** Obrigatória (qualquer usuário)
+
+**Respostas**
+- `200` — Etapa encontrada (shape de etapa)
+- `401` — Sem token
+- `404` — Etapa não encontrada (ou não pertence ao projeto)
+
+---
+
+### `PATCH /projects/:id/stages/:stageId`
+
+Atualiza campos escalares de uma etapa `pendente` (não altera o checklist de entregáveis).
+
+**Auth:** `MANAGER_ACCESS` — apenas o gerente responsável pelo projeto (ou superusuário)
+
+**Body** (parcial — ao menos um campo)
+
+```json
+{ "name": "Diagnóstico Técnico Revisado" }
+```
+
+| Campo | Tipo |
+|-------|------|
+| `name` | string |
+| `description` | string |
+| `delivery_date` | date |
+| `deadline_date` | date |
+| `position` | integer |
+| `consultant_id` | UUID |
+
+**Comportamento:** as mesmas validações de data da criação se aplicam a qualquer data atualizada. Se `consultant_id` mudar, o novo consultor é notificado.
+
+**Respostas**
+- `200` — Etapa atualizada (shape de etapa)
+- `400` — Body vazio, datas inválidas
+- `401` — Sem token
+- `403` — Requisitante não é o gerente do projeto
+- `404` — Etapa (ou novo `consultant_id`) não encontrada
+- `409` — Etapa não está `pendente`, ou projeto `finalizado`
+
+---
+
+### Submissões de etapa (`stage_submissions`)
+
+O frontend deve fazer upload dos arquivos ao bucket `project-stage-files` (privado, sem restrição de caminho para usuários autenticados) antes de chamar a rota de criação. O backend valida a existência de cada `path` no bucket antes de aceitar a submissão.
+
+**Shape de submissão:**
+
+```json
+{
+  "id": "uuid",
+  "stage_id": "uuid",
+  "notes": "Entrega concluída conforme solicitado",
+  "attempt": 1,
+  "submitted_by": "uuid",
+  "submitted_at": "...",
+  "files": [
+    { "id": "uuid", "deliverable_id": "uuid", "name": "relatorio.pdf", "signed_url": "https://..." }
+  ]
+}
+```
+
+> `signed_url` (validade de 1 hora) só é retornado por `GET .../submissions/:submissionId`. A listagem (`GET .../submissions`) retorna `path` em vez de `signed_url`.
+
+---
+
+### `POST /projects/:id/stages/:stageId/submissions`
+
+O consultor atribuído à etapa submete os entregáveis solicitados.
+
+**Auth:** Obrigatória — apenas o consultor atribuído à etapa (verificação em nível de serviço)
+
+**Body**
+
+```json
+{
+  "notes": "Entrega concluída conforme solicitado",
+  "files": [
+    { "deliverable_id": "uuid", "path": "stage-files/consultant-uuid/relatorio.pdf", "name": "relatorio.pdf" }
+  ]
+}
+```
+
+| Campo | Tipo | Obrigatório | Descrição |
+|-------|------|-------------|-----------|
+| `notes` | string | Não | |
+| `files` | array | Sim | Um item por entregável do checklist da etapa; `deliverable_id` deve pertencer ao checklist e `path` deve existir no bucket `project-stage-files` |
+
+**Comportamento:** `attempt` é incrementado a partir das submissões anteriores da etapa (começa em 1); a etapa muda para `status: "em_revisao"`; o gerente do projeto é notificado.
+
+**Respostas**
+- `201` — Submissão criada (shape de submissão, com `path` em vez de `signed_url`)
+- `400` — Falta arquivo para algum entregável, `deliverable_id` fora do checklist, ou `path` não encontrado no storage
+- `401` — Sem token
+- `403` — Requisitante não é o consultor atribuído à etapa
+- `404` — Projeto ou etapa não encontrada
+- `409` — Etapa não está `pendente`
+
+---
+
+### `GET /projects/:id/stages/:stageId/submissions`
+
+Lista as submissões de uma etapa, ordenadas por `attempt DESC`.
+
+**Auth:** Obrigatória (qualquer usuário)
+
+**Respostas**
+- `200` — Lista de submissões, cada uma com `files` (shape de submissão, com `path`)
+- `401` — Sem token
+- `404` — Etapa não encontrada
+
+---
+
+### `GET /projects/:id/stages/:stageId/submissions/:submissionId`
+
+Busca uma submissão por id, com URLs assinadas (1 hora) no lugar dos caminhos de storage.
+
+**Auth:** Obrigatória (qualquer usuário)
+
+**Respostas**
+- `200` — Submissão encontrada (shape de submissão, com `signed_url`)
+- `401` — Sem token
+- `404` — Submissão não encontrada
+
+---
+
+### Revisões de etapa (`stage_reviews`)
+
+**Shape de revisão:**
+
+```json
+{
+  "id": "uuid",
+  "submission_id": "uuid",
+  "approved": false,
+  "notes": "Faltou anexar a planilha de custos",
+  "new_delivery_date": "2026-12-10",
+  "reviewed_by": "uuid",
+  "reviewed_at": "...",
+  "rework_deliverable_ids": ["uuid"]
+}
+```
+
+> `rework_deliverable_ids` só aparece quando `approved: false`.
+
+---
+
+### `POST /projects/:id/stages/:stageId/reviews`
+
+O gerente do projeto aprova ou reprova a submissão atual (mais recente) da etapa. Cada submissão recebe no máximo uma revisão.
+
+**Auth:** `MANAGER_ACCESS` — apenas o gerente responsável pelo projeto
+
+**Body (aprovação)**
+
+```json
+{ "approved": true, "notes": "Entrega aprovada" }
+```
+
+**Body (reprovação)**
+
+```json
+{
+  "approved": false,
+  "notes": "Faltou anexar a planilha de custos",
+  "new_delivery_date": "2026-12-10",
+  "deliverable_ids": ["uuid"]
+}
+```
+
+| Campo | Tipo | Obrigatório | Descrição |
+|-------|------|-------------|-----------|
+| `approved` | boolean | Sim | |
+| `notes` | string | Não | |
+| `new_delivery_date` | date | Se `approved: false` | Deve continuar anterior à `deadline_date` da etapa |
+| `deliverable_ids` | UUID[] | Se `approved: false` | Mínimo 1; cada id deve pertencer ao checklist da etapa |
+
+**Comportamento:** aprovação → etapa `status: "concluida"`. Reprovação → etapa `status: "pendente"` e `delivery_date` atualizada para `new_delivery_date`; registra os entregáveis a re-enviar em `stage_review_reworks`. Em ambos os casos, o consultor que submeteu é notificado.
+
+**Respostas**
+- `201` — Revisão registrada (shape de revisão)
+- `400` — `new_delivery_date`/`deliverable_ids` ausentes na reprovação, ou `deliverable_ids` fora do checklist
+- `401` — Sem token
+- `403` — Requisitante não é o gerente do projeto
+- `404` — Projeto ou etapa não encontrada
+- `409` — Etapa não está `em_revisao`, ou a submissão atual já foi revisada
+
+---
+
+### `GET /projects/:id/stages/:stageId/reviews`
+
+Lista as revisões de uma etapa, ordenadas por `reviewed_at DESC`.
+
+**Auth:** Obrigatória (qualquer usuário)
+
+**Respostas**
+- `200` — Lista de revisões (shape de revisão)
+- `401` — Sem token
+- `404` — Etapa não encontrada
+
+---
+
+### Revisões de projeto (`project_reviews`)
+
+**Shape de revisão de projeto:**
+
+```json
+{
+  "id": "uuid",
+  "project_id": "uuid",
+  "round": 1,
+  "approved": true,
+  "notes": "Projeto aprovado",
+  "reviewer_id": "uuid",
+  "reviewed_at": "..."
+}
+```
+
+---
+
+### `PATCH /projects/:id/reviews`
+
+Um diretor de sector `projetos` revisa um projeto em `status: "em_revisao"`.
+
+**Auth:** `PROJECT_DIRECTOR_ACCESS`
+
+**Body**
+
+```json
+{ "approved": true, "notes": "Projeto aprovado" }
+```
+
+| Campo | Tipo | Obrigatório |
+|-------|------|-------------|
+| `approved` | boolean | Sim |
+| `notes` | string | Sim |
+
+**Comportamento:** `round` é incrementado a partir das rodadas anteriores do projeto (começa em 1). Aprovação → projeto `status: "revisado"`. Reprovação → projeto `status: "em_andamento"`. O gerente do projeto é notificado em ambos os casos.
+
+**Respostas**
+- `200` — Revisão registrada (shape de revisão de projeto)
+- `400` — `notes` ausente
+- `401` — Sem token
+- `403` — Requisitante não é diretor de `projetos`
+- `404` — Projeto não encontrado
+- `409` — Projeto não está `em_revisao`
+
+---
+
+### `GET /projects/:id/reviews`
+
+Lista as rodadas de revisão de diretoria de um projeto, ordenadas por `round DESC`.
+
+**Auth:** Obrigatória (qualquer usuário)
+
+**Respostas**
+- `200` — Lista de revisões (array vazio se nunca revisado)
+- `401` — Sem token
+- `404` — Projeto não encontrado
+
+---
+
+### Feedback do projeto (`project_feedback`)
+
+**Shape de feedback:**
+
+```json
+{
+  "id": "uuid",
+  "project_id": "uuid",
+  "consultor_id": "uuid",
+  "answers": { "satisfacao": "boa", "nota": 9 },
+  "submitted_at": "..."
+}
+```
+
+---
+
+### `POST /projects/:id/feedback`
+
+Um consultor que foi atribuído a alguma etapa do projeto responde o feedback pós-fechamento.
+
+**Auth:** Obrigatória — apenas consultores atribuídos a alguma etapa do projeto (verificação em nível de serviço)
+
+**Body**
+
+```json
+{ "answers": { "satisfacao": "boa", "nota": 9 } }
+```
+
+| Campo | Tipo | Obrigatório | Descrição |
+|-------|------|-------------|-----------|
+| `answers` | object | Sim | Objeto livre, não pode ser vazio |
+
+**Respostas**
+- `201` — Feedback registrado (shape de feedback)
+- `400` — `answers` ausente ou vazio
+- `401` — Sem token
+- `403` — Consultor nunca foi atribuído a uma etapa do projeto
+- `404` — Projeto não encontrado
+- `409` — Projeto não está `finalizado`, ou o consultor já enviou feedback para este projeto
+
+> Cada consultor só pode enviar um feedback por projeto — garantido tanto pela constraint `UNIQUE (project_id, consultor_id)` na tabela `project_feedback` quanto pela checagem em nível de serviço que retorna `409` em caso de duplicidade.
+
+---
+
+### `GET /projects/:id/feedback`
+
+Lista o feedback submetido para um projeto.
+
+**Auth:** `MANAGER_ACCESS` OU `PROJECT_DIRECTOR_ACCESS` — **não** é `ANY_AUTH`. Consultores, incluindo os que enviaram feedback, recebem `403`.
+
+**Respostas**
+- `200` — Lista de feedback (shape de feedback)
+- `401` — Sem token
+- `403` — Requisitante não é gerente nem diretor de `projetos`
+- `404` — Projeto não encontrado
+
+---
+
+### `GET /projects/feedback-status`
+
+Lista os ids de todos os projetos `finalizado` onde o consultor autenticado tem alguma etapa atribuída a ele e ainda não enviou feedback.
+
+> Rota registrada antes de `GET /projects/:id` (mesmo motivo de `GET /projects/lookups`) para que `feedback-status` não seja interpretado como um `:id`.
+
+**Auth:** Obrigatória — apenas `consultor` (RBA por `role`). Outros papéis recebem `403`.
+
+**Resposta 200**
+
+```json
+{ "pending_feedbacks": ["uuid", "uuid"] }
+```
+
+**Respostas**
+- `200` — `{ pending_feedbacks: string[] }` (array vazio se não houver nada pendente)
+- `401` — Sem token
+- `403` — Requisitante não é `consultor`
