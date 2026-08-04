@@ -23,6 +23,7 @@ import { GamificationModule } from './modules/gamification/gamification.module';
 import { SelectionProcessModule } from './modules/selection-process/selection-process.module';
 import { PushSubscriptionsModule } from './modules/push-subscriptions/push-subscriptions.module';
 import { DocsModule } from './modules/docs/docs.module';
+import { ProjectsModule } from './modules/projects/projects.module';
 import { JwtGuard } from './common/guards/jwt.guard';
 
 @Module({
@@ -50,6 +51,7 @@ import { JwtGuard } from './common/guards/jwt.guard';
     SelectionProcessModule,
     PushSubscriptionsModule,
     DocsModule,
+    ProjectsModule,
   ],
   providers: [
     {

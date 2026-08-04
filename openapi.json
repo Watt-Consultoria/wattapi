@@ -3393,6 +3393,849 @@
           "Docs"
         ]
       }
+    },
+    "/projects": {
+      "post": {
+        "operationId": "ProjectsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProjectDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Projects"
+        ],
+        "description": "Requer autenticação. Restrito a: role: assessor, presidente OU role: gerente.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "get": {
+        "operationId": "ProjectsController_findAll",
+        "parameters": [
+          {
+            "name": "status",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lead_id",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "created_by",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "consultant_id",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProjectResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Projects"
+        ],
+        "description": "Requer autenticação.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/projects/lookups": {
+      "get": {
+        "operationId": "ProjectsController_getLookups",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectLookupsResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Projects"
+        ],
+        "description": "Requer autenticação. Restrito a: role: assessor, presidente OU role: gerente.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/projects/feedback-status": {
+      "get": {
+        "operationId": "ProjectsController_getPendingFeedbacks",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingFeedbacksResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Projects"
+        ],
+        "description": "Requer autenticação. Restrito a: role: consultor.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/projects/{id}": {
+      "get": {
+        "operationId": "ProjectsController_findById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Projects"
+        ],
+        "description": "Requer autenticação.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "patch": {
+        "operationId": "ProjectsController_transitionProject",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProjectDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Projects"
+        ],
+        "description": "Requer autenticação. Restrito a: role: assessor, presidente OU role: gerente OU role: assessor, presidente OU role: diretor E setor: projetos.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/projects/{id}/stages": {
+      "post": {
+        "operationId": "ProjectsController_createStage",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateStageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StageResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Projects"
+        ],
+        "description": "Requer autenticação. Restrito a: role: assessor, presidente OU role: gerente.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "get": {
+        "operationId": "ProjectsController_findStages",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "consultant_id",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/StageResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Projects"
+        ],
+        "description": "Requer autenticação.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/projects/{id}/stages/{stageId}": {
+      "get": {
+        "operationId": "ProjectsController_findStageById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "stageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StageResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Projects"
+        ],
+        "description": "Requer autenticação.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "patch": {
+        "operationId": "ProjectsController_updateStage",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "stageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateStageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StageResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Projects"
+        ],
+        "description": "Requer autenticação. Restrito a: role: assessor, presidente OU role: gerente.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/projects/{id}/stages/{stageId}/submissions": {
+      "post": {
+        "operationId": "ProjectsController_createSubmission",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "stageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSubmissionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmissionResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Projects"
+        ],
+        "description": "Requer autenticação.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "get": {
+        "operationId": "ProjectsController_findSubmissions",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "stageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SubmissionResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Projects"
+        ],
+        "description": "Requer autenticação.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/projects/{id}/stages/{stageId}/submissions/{submissionId}": {
+      "get": {
+        "operationId": "ProjectsController_findSubmissionById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "stageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "submissionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmissionResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Projects"
+        ],
+        "description": "Requer autenticação.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/projects/{id}/stages/{stageId}/reviews": {
+      "post": {
+        "operationId": "ProjectsController_createStageReview",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "stageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateStageReviewDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StageReviewResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Projects"
+        ],
+        "description": "Requer autenticação. Restrito a: role: assessor, presidente OU role: gerente.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "get": {
+        "operationId": "ProjectsController_findStageReviews",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "stageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/StageReviewResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Projects"
+        ],
+        "description": "Requer autenticação.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/projects/{id}/reviews": {
+      "patch": {
+        "operationId": "ProjectsController_reviewProject",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectReviewDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectReviewResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Projects"
+        ],
+        "description": "Requer autenticação. Restrito a: role: assessor, presidente OU role: diretor E setor: projetos.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "get": {
+        "operationId": "ProjectsController_findProjectReviews",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProjectReviewResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Projects"
+        ],
+        "description": "Requer autenticação.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/projects/{id}/feedback": {
+      "post": {
+        "operationId": "ProjectsController_submitFeedback",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitFeedbackDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectFeedbackResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Projects"
+        ],
+        "description": "Requer autenticação.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "get": {
+        "operationId": "ProjectsController_findProjectFeedback",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProjectFeedbackResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Projects"
+        ],
+        "description": "Requer autenticação. Restrito a: role: assessor, presidente OU role: gerente OU role: assessor, presidente OU role: diretor E setor: projetos.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
     }
   },
   "info": {
@@ -6360,28 +7203,47 @@
       "CreateSubmissionDto": {
         "type": "object",
         "properties": {
-          "task_id": {
-            "type": "string",
-            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+          "notes": {
+            "type": "string"
           },
-          "description": {
-            "type": "string",
-            "minLength": 1
-          },
-          "file_path": {
-            "type": "string",
-            "minLength": 1
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "deliverable_id": {
+                  "type": "string",
+                  "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+                },
+                "path": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "deliverable_id",
+                "path",
+                "name"
+              ]
+            }
           }
         },
         "required": [
-          "task_id",
-          "description",
-          "file_path"
+          "files"
         ],
         "example": {
-          "task_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-          "description": "Participei do vídeo em 04/06/2026",
-          "file_path": "proofs/uuid-do-usuario/nome-do-arquivo.pdf"
+          "notes": "Entrega concluída conforme solicitado",
+          "files": [
+            {
+              "deliverable_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+              "path": "stage-files/consultant-uuid/relatorio.pdf",
+              "name": "relatorio.pdf"
+            }
+          ]
         }
       },
       "SubmissionResponseDto": {
@@ -6390,80 +7252,81 @@
           "id": {
             "type": "string"
           },
-          "task_id": {
+          "stage_id": {
             "type": "string"
           },
-          "user_id": {
-            "type": "string"
-          },
-          "house_id": {
-            "type": "string"
-          },
-          "cycle_id": {
-            "type": "string"
-          },
-          "description": {
-            "type": "string"
-          },
-          "file_url": {
-            "type": "string"
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "pending",
-              "approved",
-              "rejected"
-            ]
-          },
-          "rejection_reason": {
+          "notes": {
             "type": "string",
             "nullable": true
           },
-          "reviewed_by": {
-            "type": "string",
-            "nullable": true
+          "attempt": {
+            "type": "number"
           },
-          "reviewed_at": {
-            "type": "string",
-            "nullable": true
-          },
-          "created_at": {
+          "submitted_by": {
             "type": "string"
           },
-          "updated_at": {
+          "submitted_at": {
             "type": "string"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "deliverable_id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "path": {
+                  "type": "string"
+                },
+                "signed_url": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "deliverable_id",
+                "name"
+              ],
+              "example": {
+                "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                "deliverable_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                "name": "relatorio.pdf",
+                "signed_url": "https://storage.example.com/project-stage-files/signed-url"
+              }
+            }
           }
         },
         "required": [
           "id",
-          "task_id",
-          "user_id",
-          "house_id",
-          "cycle_id",
-          "description",
-          "file_url",
-          "status",
-          "rejection_reason",
-          "reviewed_by",
-          "reviewed_at",
-          "created_at",
-          "updated_at"
+          "stage_id",
+          "notes",
+          "attempt",
+          "submitted_by",
+          "submitted_at",
+          "files"
         ],
         "example": {
           "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-          "task_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-          "user_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-          "house_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-          "cycle_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-          "description": "Participei do vídeo em 04/06/2026",
-          "file_url": "https://storage.example.com/gamification-proofs/signed-url",
-          "status": "pending",
-          "rejection_reason": null,
-          "reviewed_by": null,
-          "reviewed_at": null,
-          "created_at": "2026-06-04T00:00:00.000Z",
-          "updated_at": "2026-06-04T00:00:00.000Z"
+          "stage_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+          "notes": "Entrega concluída conforme solicitado",
+          "attempt": 1,
+          "submitted_by": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+          "submitted_at": "2026-01-01T00:00:00.000Z",
+          "files": [
+            {
+              "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+              "deliverable_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+              "name": "relatorio.pdf",
+              "signed_url": "https://storage.example.com/project-stage-files/signed-url"
+            }
+          ]
         }
       },
       "ReviewSubmissionDto": {
@@ -7590,11 +8453,19 @@
       "CreateStageDto": {
         "type": "object",
         "properties": {
-          "selection_process_id": {
+          "delivery_date": {
             "type": "string",
-            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+            "minLength": 1
+          },
+          "deadline_date": {
+            "type": "string",
+            "minLength": 1
           },
           "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": {
             "type": "string",
             "minLength": 1
           },
@@ -7604,19 +8475,54 @@
             "maximum": 9007199254740991,
             "minimum": 0
           },
-          "shift": {
-            "type": "boolean"
+          "consultant_id": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+          },
+          "deliverables": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "description": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "name",
+                "description"
+              ]
+            }
           }
         },
         "required": [
-          "selection_process_id",
+          "delivery_date",
+          "deadline_date",
           "name",
-          "position"
+          "description",
+          "position",
+          "consultant_id",
+          "deliverables"
         ],
         "example": {
-          "selection_process_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-          "name": "Entrevista",
-          "position": 1
+          "delivery_date": "2026-12-01",
+          "deadline_date": "2026-12-15",
+          "name": "Diagnóstico Técnico",
+          "description": "Levantamento técnico inicial",
+          "position": 1,
+          "consultant_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+          "deliverables": [
+            {
+              "name": "Relatório",
+              "description": "Relatório de diagnóstico"
+            }
+          ]
         }
       },
       "StageResponseDto": {
@@ -7625,32 +8531,107 @@
           "id": {
             "type": "string"
           },
-          "selection_process_id": {
+          "project_id": {
+            "type": "string"
+          },
+          "delivery_date": {
+            "type": "string"
+          },
+          "deadline_date": {
             "type": "string"
           },
           "name": {
             "type": "string"
           },
+          "description": {
+            "type": "string"
+          },
           "position": {
             "type": "number"
           },
+          "consultant_id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pendente",
+              "em_revisao",
+              "concluida"
+            ]
+          },
+          "created_by": {
+            "type": "string"
+          },
           "created_at": {
             "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          },
+          "deliverables": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "description"
+              ],
+              "example": {
+                "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                "name": "Relatório",
+                "description": "Relatório de diagnóstico"
+              }
+            }
           }
         },
         "required": [
           "id",
-          "selection_process_id",
+          "project_id",
+          "delivery_date",
+          "deadline_date",
           "name",
+          "description",
           "position",
-          "created_at"
+          "consultant_id",
+          "status",
+          "created_by",
+          "created_at",
+          "updated_at",
+          "deliverables"
         ],
         "example": {
           "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-          "selection_process_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-          "name": "Entrevista",
+          "project_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+          "delivery_date": "2026-12-01",
+          "deadline_date": "2026-12-15",
+          "name": "Diagnóstico Técnico",
+          "description": "Levantamento técnico inicial",
           "position": 1,
-          "created_at": "2026-02-15T00:00:00.000Z"
+          "consultant_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+          "status": "pendente",
+          "created_by": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+          "created_at": "2026-01-01T00:00:00.000Z",
+          "updated_at": "2026-01-01T00:00:00.000Z",
+          "deliverables": [
+            {
+              "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+              "name": "Relatório",
+              "description": "Relatório de diagnóstico"
+            }
+          ]
         }
       },
       "UpdateStageDto": {
@@ -7660,16 +8641,31 @@
             "type": "string",
             "minLength": 1
           },
+          "description": {
+            "type": "string",
+            "minLength": 1
+          },
+          "delivery_date": {
+            "type": "string",
+            "minLength": 1
+          },
+          "deadline_date": {
+            "type": "string",
+            "minLength": 1
+          },
           "position": {
             "type": "integer",
             "exclusiveMinimum": true,
             "maximum": 9007199254740991,
             "minimum": 0
+          },
+          "consultant_id": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
           }
         },
         "example": {
-          "name": "Entrevista Técnica",
-          "position": 2
+          "name": "Diagnóstico Técnico Revisado"
         }
       },
       "CandidateResponseDto": {
@@ -7789,6 +8785,478 @@
           "endpoint": "https://fcm.googleapis.com/fcm/send/...",
           "p256dh": "BNcRdreALRFXTkOOUHK1EtK2wtwe6YNE5vIVrDML",
           "auth": "tBHItJI5svbpez7KI4CCXg"
+        }
+      },
+      "CreateProjectDto": {
+        "type": "object",
+        "properties": {
+          "lead_id": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+          },
+          "project_type_id": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string"
+          },
+          "delivery_date": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "lead_id",
+          "project_type_id",
+          "name",
+          "delivery_date"
+        ],
+        "example": {
+          "lead_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+          "project_type_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+          "name": "Projeto Watt",
+          "description": "Descrição do projeto",
+          "delivery_date": "2027-01-01"
+        }
+      },
+      "ProjectResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "lead_id": {
+            "type": "string"
+          },
+          "project_type_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "delivery_date": {
+            "type": "string"
+          },
+          "closing_notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "closed_by": {
+            "type": "string",
+            "nullable": true
+          },
+          "closed_at": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "em_andamento",
+              "em_revisao",
+              "revisado",
+              "finalizado"
+            ]
+          },
+          "created_by": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "lead_id",
+          "project_type_id",
+          "name",
+          "description",
+          "delivery_date",
+          "closing_notes",
+          "closed_by",
+          "closed_at",
+          "status",
+          "created_by",
+          "created_at",
+          "updated_at"
+        ],
+        "example": {
+          "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+          "lead_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+          "project_type_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+          "name": "Projeto Watt",
+          "description": "Descrição do projeto",
+          "delivery_date": "2027-01-01",
+          "closing_notes": null,
+          "closed_by": null,
+          "closed_at": null,
+          "status": "em_andamento",
+          "created_by": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+          "created_at": "2026-01-01T00:00:00.000Z",
+          "updated_at": "2026-01-01T00:00:00.000Z"
+        }
+      },
+      "ProjectLookupsResponseDto": {
+        "type": "object",
+        "properties": {
+          "leads": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "company_name": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "company_name",
+                "status"
+              ]
+            }
+          },
+          "portfolio_items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string",
+                  "nullable": true
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "description"
+              ]
+            }
+          },
+          "consultants": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "email": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "email"
+              ]
+            }
+          }
+        },
+        "required": [
+          "leads",
+          "portfolio_items",
+          "consultants"
+        ],
+        "example": {
+          "leads": [
+            {
+              "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+              "company_name": "Empresa X",
+              "status": "em_progresso"
+            }
+          ],
+          "portfolio_items": [
+            {
+              "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+              "name": "Consultoria Financeira",
+              "description": "Diagnóstico e planejamento financeiro"
+            }
+          ],
+          "consultants": [
+            {
+              "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+              "name": "João Silva",
+              "email": "joao@watt.com"
+            }
+          ]
+        }
+      },
+      "PendingFeedbacksResponseDto": {
+        "type": "object",
+        "properties": {
+          "pending_feedbacks": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "pending_feedbacks"
+        ],
+        "example": {
+          "pending_feedbacks": [
+            "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+            "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+          ]
+        }
+      },
+      "UpdateProjectDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "em_revisao",
+              "finalizado"
+            ]
+          },
+          "closing_notes": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "example": {
+          "status": "finalizado",
+          "closing_notes": "Projeto entregue com sucesso"
+        }
+      },
+      "CreateStageReviewDto": {
+        "type": "object",
+        "properties": {
+          "approved": {
+            "type": "boolean"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "new_delivery_date": {
+            "type": "string",
+            "minLength": 1
+          },
+          "deliverable_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+            }
+          }
+        },
+        "required": [
+          "approved"
+        ],
+        "example": {
+          "approved": false,
+          "notes": "Faltou anexar a planilha de custos",
+          "new_delivery_date": "2026-12-20",
+          "deliverable_ids": [
+            "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+          ]
+        }
+      },
+      "StageReviewResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "submission_id": {
+            "type": "string"
+          },
+          "approved": {
+            "type": "boolean"
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "new_delivery_date": {
+            "type": "string",
+            "nullable": true
+          },
+          "reviewed_by": {
+            "type": "string"
+          },
+          "reviewed_at": {
+            "type": "string"
+          },
+          "rework_deliverable_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "submission_id",
+          "approved",
+          "notes",
+          "new_delivery_date",
+          "reviewed_by",
+          "reviewed_at"
+        ],
+        "example": {
+          "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+          "submission_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+          "approved": false,
+          "notes": "Faltou anexar a planilha de custos",
+          "new_delivery_date": "2026-12-20",
+          "reviewed_by": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+          "reviewed_at": "2026-01-01T00:00:00.000Z",
+          "rework_deliverable_ids": [
+            "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+          ]
+        }
+      },
+      "ProjectReviewDto": {
+        "type": "object",
+        "properties": {
+          "approved": {
+            "type": "boolean"
+          },
+          "notes": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "approved",
+          "notes"
+        ],
+        "example": {
+          "approved": true,
+          "notes": "Projeto aprovado"
+        }
+      },
+      "ProjectReviewResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "round": {
+            "type": "number"
+          },
+          "approved": {
+            "type": "boolean"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "reviewer_id": {
+            "type": "string"
+          },
+          "reviewed_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "project_id",
+          "round",
+          "approved",
+          "notes",
+          "reviewer_id",
+          "reviewed_at"
+        ],
+        "example": {
+          "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+          "project_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+          "round": 1,
+          "approved": true,
+          "notes": "Projeto aprovado",
+          "reviewer_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+          "reviewed_at": "2026-01-01T00:00:00.000Z"
+        }
+      },
+      "SubmitFeedbackDto": {
+        "type": "object",
+        "properties": {
+          "answers": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "answers"
+        ],
+        "example": {
+          "answers": {
+            "satisfacao": "boa",
+            "nota": 9
+          }
+        }
+      },
+      "ProjectFeedbackResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "consultor_id": {
+            "type": "string"
+          },
+          "answers": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "submitted_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "project_id",
+          "consultor_id",
+          "answers",
+          "submitted_at"
+        ],
+        "example": {
+          "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+          "project_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+          "consultor_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+          "answers": {
+            "satisfacao": "boa",
+            "nota": 9
+          },
+          "submitted_at": "2026-01-01T00:00:00.000Z"
         }
       }
     }
