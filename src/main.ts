@@ -13,7 +13,14 @@ async function bootstrap() {
   app.useGlobalPipes(new ZodValidationPipe());
 
   const openApiDocument = buildOpenApiDocument(app);
-  SwaggerModule.setup('docs', app, openApiDocument);
+  // swaggerUiEnabled: false — the built-in UI serves swagger-ui-dist's JS/CSS
+  // straight from node_modules at request time, which Vercel's serverless
+  // bundler never includes (nothing statically imports those files), so the
+  // assets 404 in production. DocsController renders the UI from a CDN
+  // instead; this only keeps /docs-json (and /docs-yaml) available.
+  SwaggerModule.setup('docs', app, openApiDocument, {
+    swaggerUiEnabled: false,
+  });
 
   const envService = app.get(EnvService);
   const PORT = envService.get('PORT');

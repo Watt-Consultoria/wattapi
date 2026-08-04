@@ -78,7 +78,7 @@ describe('POST /selection-process/interviews', () => {
           Authorization: `Bearer ${user.token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ slots: ['2026-08-02T11:00:00Z'] }),
+        body: JSON.stringify({ slots: [VALID_SLOT_1] }),
       });
 
       const response = await fetch(BASE_URL, {
@@ -88,14 +88,14 @@ describe('POST /selection-process/interviews', () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          slots: ['2026-08-02T11:00:00Z', '2026-08-02T14:00:00Z'],
+          slots: [VALID_SLOT_1, VALID_SLOT_2],
         }),
       });
       const body = (await response.json()) as InterviewSlotResponse[];
 
       expect(response.status).toBe(201);
       expect(body.length).toBe(1);
-      expect(body[0].starts_at).toContain('14:00');
+      expect(body[0].starts_at).toContain('12:00');
     });
 
     test('Attempting to create a slot at a non-full hour', async () => {
@@ -232,7 +232,7 @@ describe('POST /selection-process/interviews', () => {
             Authorization: `Bearer ${consultorA.token}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ slots: ['2026-08-04T11:00:00Z'] }),
+          body: JSON.stringify({ slots: [VALID_SLOT_1] }),
         }),
         fetch(BASE_URL, {
           method: 'POST',
@@ -240,7 +240,7 @@ describe('POST /selection-process/interviews', () => {
             Authorization: `Bearer ${consultorB.token}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ slots: ['2026-08-04T11:00:00Z'] }),
+          body: JSON.stringify({ slots: [VALID_SLOT_2] }),
         }),
       ]);
 
@@ -266,7 +266,7 @@ describe('POST /selection-process/interviews', () => {
           Authorization: `Bearer ${user.token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ slots: ['2026-08-03T11:00:00Z'] }),
+        body: JSON.stringify({ slots: [VALID_SLOT_1] }),
       });
 
       expect(response.status).toBe(201);
