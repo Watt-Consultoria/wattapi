@@ -3379,6 +3379,20 @@
           }
         ]
       }
+    },
+    "/docs": {
+      "get": {
+        "operationId": "DocsController_getDocs",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Docs"
+        ]
+      }
     }
   },
   "info": {
