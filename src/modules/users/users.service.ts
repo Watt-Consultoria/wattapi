@@ -61,6 +61,13 @@ export class UsersService {
     return result.rows.map(toResponse);
   }
 
+  async findAllInactive(): Promise<UserResponse[]> {
+    const result = await this.db.query<UserRow>(
+      `SELECT ${SELECT_FIELDS} FROM users WHERE inactive = true ORDER BY created_at ASC`,
+    );
+    return result.rows.map(toResponse);
+  }
+
   async create(
     id: string,
     email: string,

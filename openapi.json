@@ -256,6 +256,36 @@
         ]
       }
     },
+    "/users/inactive": {
+      "get": {
+        "operationId": "UsersController_findAllInactive",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Users"
+        ],
+        "description": "Requer autenticação. Restrito a: role: assessor, presidente.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/auth/me": {
       "get": {
         "operationId": "AuthController_me",
@@ -4230,6 +4260,151 @@
           "Projects"
         ],
         "description": "Requer autenticação. Restrito a: role: assessor, presidente OU role: gerente OU role: assessor, presidente OU role: diretor E setor: projetos.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/heroes": {
+      "post": {
+        "operationId": "HeroesController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateHeroDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HeroResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Heroes"
+        ],
+        "description": "Requer autenticação. Restrito a: role: assessor, presidente.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "get": {
+        "operationId": "HeroesController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/HeroResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Heroes"
+        ],
+        "description": "Requer autenticação.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/heroes/{id}": {
+      "get": {
+        "operationId": "HeroesController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HeroResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Heroes"
+        ],
+        "description": "Requer autenticação.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "patch": {
+        "operationId": "HeroesController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateHeroDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HeroResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Heroes"
+        ],
+        "description": "Requer autenticação. Restrito a: role: assessor, presidente.",
         "security": [
           {
             "bearer": []
@@ -9504,6 +9679,166 @@
             "nota": 9
           },
           "submitted_at": "2026-01-01T00:00:00.000Z"
+        }
+      },
+      "CreateHeroDto": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string"
+          },
+          "phrase": {
+            "type": "string",
+            "minLength": 1
+          },
+          "contributions": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "start_year": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "end_year": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "photo_path": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "user_id",
+          "phrase",
+          "contributions",
+          "start_year",
+          "end_year",
+          "photo_path"
+        ],
+        "example": {
+          "user_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+          "phrase": "Fez a diferença em tudo que tocou.",
+          "contributions": [
+            "Liderou o projeto X",
+            "Mentorou 5 consultores"
+          ],
+          "start_year": 2020,
+          "end_year": 2023,
+          "photo_path": "heroes/user-uuid/foto.jpg"
+        }
+      },
+      "HeroResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "user_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "phrase": {
+            "type": "string"
+          },
+          "contributions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "start_year": {
+            "type": "number"
+          },
+          "end_year": {
+            "type": "number"
+          },
+          "photo_url": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "user_id",
+          "name",
+          "role",
+          "phrase",
+          "contributions",
+          "start_year",
+          "end_year",
+          "photo_url",
+          "created_at",
+          "updated_at"
+        ],
+        "example": {
+          "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+          "user_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+          "name": "João Silva",
+          "role": "consultor",
+          "phrase": "Fez a diferença em tudo que tocou.",
+          "contributions": [
+            "Liderou o projeto X",
+            "Mentorou 5 consultores"
+          ],
+          "start_year": 2020,
+          "end_year": 2023,
+          "photo_url": "https://storage.example.com/hero-photos/signed-url",
+          "created_at": "2026-01-01T00:00:00.000Z",
+          "updated_at": "2026-01-01T00:00:00.000Z"
+        }
+      },
+      "UpdateHeroDto": {
+        "type": "object",
+        "properties": {
+          "phrase": {
+            "type": "string",
+            "minLength": 1
+          },
+          "contributions": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "start_year": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "end_year": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "photo_path": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "example": {
+          "phrase": "Frase atualizada.",
+          "contributions": [
+            "Nova contribuição"
+          ]
         }
       },
       "CreateWalletAccountDto": {

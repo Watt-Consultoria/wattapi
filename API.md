@@ -37,6 +37,7 @@
 - [Gamification](#gamification)
 - [Processo Seletivo](#processo-seletivo)
 - [Projects](#projects)
+- [Heroes](#heroes)
 - [Wallet](#wallet)
 
 ---
@@ -210,6 +211,21 @@ Realiza soft delete de um usuário (marca como inativo).
 - `401` — Token ausente ou inválido
 - `403` — Requer rank ≥ 3
 - `404` — Usuário não encontrado
+
+---
+
+### `GET /users/inactive`
+
+Lista todos os usuários marcados como inativos (soft-deletados), ordenados por data de criação.
+
+**Auth:** Obrigatória — rank ≥ 3
+
+> `cpf` é omitido para usuários com rank < 2.
+
+**Respostas**
+- `200` — Array de usuários inativos
+- `401` — Token ausente ou inválido
+- `403` — Requer rank ≥ 3
 
 ---
 
@@ -3508,6 +3524,138 @@ Lista os ids de todos os projetos `finalizado` onde o consultor autenticado tem 
 - `200` — `{ pending_feedbacks: string[] }` (array vazio se não houver nada pendente)
 - `401` — Sem token
 - `403` — Requisitante não é `consultor`
+
+---
+
+## Heroes
+
+Homenageia ex-membros de destaque ("heróis") em uma página pública/institucional. Todo hero referencia um usuário já marcado como `inactive = true` — `name` e `role` do hero **não são armazenados**, são sempre lidos do usuário referenciado no momento da leitura. O frontend deve fazer upload da foto ao bucket `hero-photos` antes de chamar as rotas de criação/atualização.
+
+**Shape de hero:**
+
+```json
+{
+  "id": "uuid",
+  "user_id": "uuid",
+  "name": "João Silva",
+  "role": "consultor",
+  "phrase": "Fez a diferença em tudo que tocou.",
+  "contributions": ["Liderou o projeto X", "Mentorou 5 consultores"],
+  "start_year": 2020,
+  "end_year": 2023,
+  "photo_url": "https://...",
+  "created_at": "...",
+  "updated_at": "..."
+}
+```
+
+> `photo_url` é uma signed URL com validade de 1 hora. O `photo_path` de storage não é exposto.
+
+---
+
+### `POST /heroes`
+
+Cria um hero a partir de um usuário inativo.
+
+**Auth:** Obrigatória — rank ≥ 3 (`assessor`, `presidente`)
+
+**Body**
+
+```json
+{
+  "user_id": "uuid",
+  "phrase": "Fez a diferença em tudo que tocou.",
+  "contributions": ["Liderou o projeto X", "Mentorou 5 consultores"],
+  "start_year": 2020,
+  "end_year": 2023,
+  "photo_path": "heroes/user-uuid/foto.jpg"
+}
+```
+
+| Campo | Tipo | Obrigatório | Descrição |
+|-------|------|-------------|-----------|
+| `user_id` | UUID | Sim | Deve referenciar um usuário com `inactive = true` que ainda não tem hero |
+| `phrase` | string | Sim | Mínimo 1 caractere |
+| `contributions` | array de string | Sim | Mínimo 1 item |
+| `start_year` | integer | Sim | Deve ser `<= end_year` |
+| `end_year` | integer | Sim | Deve ser `>= start_year` |
+| `photo_path` | string | Sim | Deve existir no bucket `hero-photos` |
+
+`name` e `role` **não** são enviados no body — são derivados do usuário referenciado.
+
+**Respostas**
+- `201` — Hero criado (shape de hero)
+- `400` — Campo obrigatório ausente, `contributions` vazio, `start_year > end_year`, usuário referenciado não está `inactive`, ou `photo_path` não encontrado no storage
+- `401` — Token ausente, inválido ou expirado
+- `403` — Requer rank ≥ 3
+- `404` — `user_id` não corresponde a nenhum usuário
+- `409` — `user_id` já tem um hero
+
+---
+
+### `GET /heroes`
+
+Lista todos os heróis, ordenados por `created_at DESC`.
+
+**Auth:** Obrigatória — qualquer rank
+
+**Respostas**
+- `200` — Array de heróis (shape de hero)
+- `401` — Token ausente, inválido ou expirado
+
+---
+
+### `GET /heroes/:id`
+
+Retorna um hero específico.
+
+**Auth:** Obrigatória — qualquer rank
+
+**Path params**
+
+| Parâmetro | Tipo | Descrição |
+|-----------|------|-----------|
+| `id` | UUID | ID do hero |
+
+**Respostas**
+- `200` — Hero (shape de hero)
+- `401` — Token ausente, inválido ou expirado
+- `404` — Hero não encontrado
+
+---
+
+### `PATCH /heroes/:id`
+
+Atualiza campos editoriais de um hero existente. `user_id` é imutável e não pode ser alterado por esta rota.
+
+**Auth:** Obrigatória — rank ≥ 3 (`assessor`, `presidente`)
+
+**Path params**
+
+| Parâmetro | Tipo | Descrição |
+|-----------|------|-----------|
+| `id` | UUID | ID do hero |
+
+**Body** (todos os campos opcionais, ao menos um obrigatório)
+
+```json
+{ "phrase": "Frase atualizada.", "contributions": ["Nova contribuição"] }
+```
+
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| `phrase` | string | Mínimo 1 caractere |
+| `contributions` | array de string | Mínimo 1 item |
+| `start_year` | integer | Validado contra `end_year` (existente ou novo) |
+| `end_year` | integer | Validado contra `start_year` (existente ou novo) |
+| `photo_path` | string | Deve existir no bucket `hero-photos` |
+
+**Respostas**
+- `200` — Hero atualizado (shape de hero)
+- `400` — Body vazio, `start_year > end_year` (considerando valores existentes para campos não enviados), ou `photo_path` não encontrado no storage
+- `401` — Token ausente, inválido ou expirado
+- `403` — Requer rank ≥ 3
+- `404` — Hero não encontrado
 
 ---
 
