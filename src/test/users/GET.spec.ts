@@ -136,6 +136,125 @@ describe('GET /users', () => {
   });
 });
 
+// ─── GET /users/inactive ────────────────────────────────────────────────────
+
+describe('GET /users/inactive', () => {
+  describe('Authenticated CONSULTOR', () => {
+    test('Attempting to list inactive users', async () => {
+      const consultor = await orchestrator.database.seed.createUser({
+        username: 'Consultor GET Inactive Users',
+        email: `users.getinactive.consultor.${Date.now()}@watt-test.com`,
+        password: '',
+        role: 'consultor',
+        sector: 'comercial',
+      });
+
+      const response = await fetch(`${BASE_URL}/inactive`, {
+        headers: { Authorization: `Bearer ${consultor.token}` },
+      });
+      expect(response.status).toBe(403);
+    });
+  });
+
+  describe('Authenticated GERENTE', () => {
+    test('Attempting to list inactive users', async () => {
+      const gerente = await orchestrator.database.seed.createUser({
+        username: 'Gerente GET Inactive Users',
+        email: `users.getinactive.gerente.${Date.now()}@watt-test.com`,
+        password: '',
+        role: 'gerente',
+        sector: 'projetos',
+      });
+
+      const response = await fetch(`${BASE_URL}/inactive`, {
+        headers: { Authorization: `Bearer ${gerente.token}` },
+      });
+      expect(response.status).toBe(403);
+    });
+  });
+
+  describe('Authenticated DIRETOR', () => {
+    test('Attempting to list inactive users', async () => {
+      const diretor = await orchestrator.database.seed.createUser({
+        username: 'Diretor GET Inactive Users',
+        email: `users.getinactive.diretor.${Date.now()}@watt-test.com`,
+        password: '',
+        role: 'diretor',
+        sector: 'executivo',
+      });
+
+      const response = await fetch(`${BASE_URL}/inactive`, {
+        headers: { Authorization: `Bearer ${diretor.token}` },
+      });
+      expect(response.status).toBe(403);
+    });
+  });
+
+  describe('Authenticated ASSESSOR', () => {
+    test('Retrieving only inactive users', async () => {
+      const assessor = await orchestrator.database.seed.createUser({
+        username: 'Assessor GET Inactive Users',
+        email: `users.getinactive.assessor.${Date.now()}@watt-test.com`,
+        password: '',
+        role: 'assessor',
+        sector: 'institucional',
+      });
+      const target = await orchestrator.database.seed.createUser({
+        username: 'Target GET Inactive',
+        email: `users.getinactive.target.${Date.now()}@watt-test.com`,
+        password: '',
+        role: 'consultor',
+        sector: 'comercial',
+      });
+      await fetch(`${BASE_URL}/${target.id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${assessor.token}` },
+      });
+
+      const response = await fetch(`${BASE_URL}/inactive`, {
+        headers: { Authorization: `Bearer ${assessor.token}` },
+      });
+      const body = (await response.json()) as UserBody[];
+
+      expect(response.status).toBe(200);
+      expect(Array.isArray(body)).toBe(true);
+      expect(body.some((u) => u.id === target.id)).toBe(true);
+      expect(body.some((u) => u.id === assessor.id)).toBe(false);
+      expect(body[0]).toHaveProperty('cpf');
+
+      const activeResponse = await fetch(BASE_URL, {
+        headers: { Authorization: `Bearer ${assessor.token}` },
+      });
+      const activeBody = (await activeResponse.json()) as UserBody[];
+      expect(activeBody.some((u) => u.id === target.id)).toBe(false);
+    });
+  });
+
+  describe('Authenticated PRESIDENTE', () => {
+    test('Retrieving inactive users', async () => {
+      const presidente = await orchestrator.database.seed.createUser({
+        username: 'Presidente GET Inactive Users',
+        email: `users.getinactive.presidente.${Date.now()}@watt-test.com`,
+        password: '',
+        role: 'presidente',
+        sector: 'executivo',
+      });
+
+      const response = await fetch(`${BASE_URL}/inactive`, {
+        headers: { Authorization: `Bearer ${presidente.token}` },
+      });
+      expect(response.status).toBe(200);
+    });
+  });
+
+  describe('Unauthenticated user', () => {
+    test('Attempting to list inactive users', async () => {
+      const response = await fetch(`${BASE_URL}/inactive`);
+      expect(response.status).toBe(401);
+    });
+  });
+});
+
 // ─── GET /users/:id ───────────────────────────────────────────────────────────
 
 describe('GET /users/:id', () => {

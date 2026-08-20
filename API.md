@@ -212,6 +212,21 @@ Realiza soft delete de um usuário (marca como inativo).
 
 ---
 
+### `GET /users/inactive`
+
+Lista todos os usuários marcados como inativos (soft-deletados), ordenados por data de criação.
+
+**Auth:** Obrigatória — rank ≥ 3
+
+> `cpf` é omitido para usuários com rank < 2.
+
+**Respostas**
+- `200` — Array de usuários inativos
+- `401` — Token ausente ou inválido
+- `403` — Requer rank ≥ 3
+
+---
+
 ## Settings
 
 ### `GET /settings`

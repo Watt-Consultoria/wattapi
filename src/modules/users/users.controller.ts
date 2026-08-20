@@ -124,6 +124,19 @@ export class UsersController {
     return this.usersService.findAll();
   }
 
+  @Get('inactive')
+  @RoutePolicy({
+    access: {
+      mode: 'authenticated',
+      rba: [['role', ['assessor', 'presidente']]],
+    },
+    output: { cpf: { minRank: 2, selfBypass: false } },
+  })
+  @ApiResponse({ status: 200, type: [UserResponseDto] })
+  findAllInactive(): Promise<UserResponse[]> {
+    return this.usersService.findAllInactive();
+  }
+
   @Get(':user_id')
   @RoutePolicy({
     access: { mode: 'authenticated' },

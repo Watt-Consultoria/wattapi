@@ -256,6 +256,36 @@
         ]
       }
     },
+    "/users/inactive": {
+      "get": {
+        "operationId": "UsersController_findAllInactive",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Users"
+        ],
+        "description": "Requer autenticação. Restrito a: role: assessor, presidente.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/auth/me": {
       "get": {
         "operationId": "AuthController_me",
