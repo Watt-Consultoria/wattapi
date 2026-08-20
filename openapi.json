@@ -4324,12 +4324,7 @@
         "tags": [
           "Heroes"
         ],
-        "description": "Requer autenticação.",
-        "security": [
-          {
-            "bearer": []
-          }
-        ]
+        "description": "Não requer autenticação."
       }
     },
     "/heroes/{id}": {
@@ -4360,12 +4355,7 @@
         "tags": [
           "Heroes"
         ],
-        "description": "Requer autenticação.",
-        "security": [
-          {
-            "bearer": []
-          }
-        ]
+        "description": "Não requer autenticação."
       },
       "patch": {
         "operationId": "HeroesController_update",
