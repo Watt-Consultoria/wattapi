@@ -174,10 +174,7 @@ export class ReimbursementsService {
         paidAmountCents = payout;
         partialReason = dto.partial_reason ?? null;
 
-        const baseDescription = `Reembolso aprovado: ${reimbursement.title} (${reimbursement.id})`;
-        const description = isPartial
-          ? `${baseDescription} (parcial)`
-          : baseDescription;
+        const description = `Reembolso: ${reimbursement.title}`;
 
         await client.query(
           `INSERT INTO wallet_transactions (account_id, type, amount_cents, category, description, transaction_date, created_by)
