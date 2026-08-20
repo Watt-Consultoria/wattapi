@@ -1,4 +1,4 @@
-## ADDED Requirements
+## MODIFIED Requirements
 
 ### Requirement: Presidente Executivo can approve or reject a pending reimbursement
 Only users with rank 4 (Presidente Executivo) SHALL be able to change the status of a reimbursement from `pending` to `approved` or `rejected`. Status transitions are one-way: once resolved, the status cannot be changed again. Approving a reimbursement additionally requires an `account_id` identifying the wallet account the payout comes from; the system SHALL atomically update the reimbursement status, create an `expense` wallet transaction on that account for the amount actually paid (using the reimbursement's own `category`), and decrease the account's `balance_cents` accordingly. Rejecting a reimbursement does not require or use `account_id`, `paid_amount_cents`, or `partial_reason`, and does not create any wallet transaction.

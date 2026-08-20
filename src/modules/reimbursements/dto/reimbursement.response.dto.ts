@@ -30,6 +30,8 @@ export const reimbursementResponseSchema = z
     category: z.string(),
     pix_key: z.string(),
     status: z.enum(['pending', 'approved', 'rejected']),
+    paid_amount_cents: z.number().nullable(),
+    partial_reason: z.string().nullable(),
     attachments: z.array(reimbursementAttachmentResponseSchema),
     created_at: z.string(),
     updated_at: z.string(),
@@ -44,6 +46,8 @@ export const reimbursementResponseSchema = z
       category: 'ingresso',
       pix_key: 'joao@empresa.com',
       status: 'pending',
+      paid_amount_cents: null,
+      partial_reason: null,
       attachments: [
         {
           id: '3fa85f64-5717-4562-b3fc-2c963f66afa6',

@@ -80,6 +80,8 @@ async function clearDatabase(): Promise<void> {
   await p.query('DELETE FROM activities');
   await p.query('DELETE FROM time_entries');
   await p.query('DELETE FROM routine_slots');
+  await p.query('DELETE FROM wallet_transactions');
+  await p.query('DELETE FROM wallet_accounts');
   await p.query('DELETE FROM reimbursements');
   await p.query('DELETE FROM project_feedback');
   await p.query('DELETE FROM project_reviews');
@@ -319,6 +321,80 @@ async function createReimbursement({
      VALUES ($1, $2, $3, $4, $5, $6)
      RETURNING id, user_id, title, description, amount_cents, category, pix_key, status`,
     [user_id, title, description, amount_cents, category, pix_key],
+  );
+  return rows[0];
+}
+
+export interface CreatedWalletAccount {
+  id: string;
+  name: string;
+  type: string;
+  balance_cents: number;
+  created_by: string;
+}
+
+async function createWalletAccount({
+  name = 'Conta de Teste',
+  type = 'checking',
+  balance_cents = 0,
+  created_by,
+}: {
+  name?: string;
+  type?: string;
+  balance_cents?: number;
+  created_by: string;
+}): Promise<CreatedWalletAccount> {
+  const { rows } = await getPool().query<CreatedWalletAccount>(
+    `INSERT INTO wallet_accounts (name, type, balance_cents, created_by)
+     VALUES ($1, $2, $3, $4)
+     RETURNING id, name, type, balance_cents, created_by`,
+    [name, type, balance_cents, created_by],
+  );
+  return rows[0];
+}
+
+export interface CreatedWalletTransaction {
+  id: string;
+  account_id: string;
+  type: string;
+  amount_cents: number;
+  category: string;
+  description: string;
+  transaction_date: string;
+  created_by: string;
+}
+
+async function createWalletTransaction({
+  account_id,
+  type = 'expense',
+  amount_cents = 5000,
+  category = 'outro',
+  description = 'Transação de teste',
+  transaction_date = '2026-01-01',
+  created_by,
+}: {
+  account_id: string;
+  type?: string;
+  amount_cents?: number;
+  category?: string;
+  description?: string;
+  transaction_date?: string;
+  created_by: string;
+}): Promise<CreatedWalletTransaction> {
+  const { rows } = await getPool().query<CreatedWalletTransaction>(
+    `INSERT INTO wallet_transactions (account_id, type, amount_cents, category, description, transaction_date, created_by)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
+     RETURNING id, account_id, type, amount_cents, category, description,
+               to_char(transaction_date, 'YYYY-MM-DD') AS transaction_date, created_by`,
+    [
+      account_id,
+      type,
+      amount_cents,
+      category,
+      description,
+      transaction_date,
+      created_by,
+    ],
   );
   return rows[0];
 }
@@ -1397,6 +1473,8 @@ export default {
       createRoutineSlot,
       createTimeEntry,
       createReimbursement,
+      createWalletAccount,
+      createWalletTransaction,
       uploadFile,
       uploadSelectionProcessFiles,
       createPortfolioItem,

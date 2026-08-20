@@ -25,6 +25,7 @@ import { PushSubscriptionsModule } from './modules/push-subscriptions/push-subsc
 import { DocsModule } from './modules/docs/docs.module';
 import { ProjectsModule } from './modules/projects/projects.module';
 import { HeroesModule } from './modules/heroes/heroes.module';
+import { WalletModule } from './modules/wallet/wallet.module';
 import { JwtGuard } from './common/guards/jwt.guard';
 
 @Module({
@@ -54,6 +55,7 @@ import { JwtGuard } from './common/guards/jwt.guard';
     DocsModule,
     ProjectsModule,
     HeroesModule,
+    WalletModule,
   ],
   providers: [
     {
