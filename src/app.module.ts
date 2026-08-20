@@ -24,6 +24,7 @@ import { SelectionProcessModule } from './modules/selection-process/selection-pr
 import { PushSubscriptionsModule } from './modules/push-subscriptions/push-subscriptions.module';
 import { DocsModule } from './modules/docs/docs.module';
 import { ProjectsModule } from './modules/projects/projects.module';
+import { HeroesModule } from './modules/heroes/heroes.module';
 import { JwtGuard } from './common/guards/jwt.guard';
 
 @Module({
@@ -52,6 +53,7 @@ import { JwtGuard } from './common/guards/jwt.guard';
     PushSubscriptionsModule,
     DocsModule,
     ProjectsModule,
+    HeroesModule,
   ],
   providers: [
     {

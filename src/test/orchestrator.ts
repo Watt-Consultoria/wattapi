@@ -62,6 +62,7 @@ async function waitForAllServices(): Promise<void> {
 
 async function clearDatabase(): Promise<void> {
   const p = getPool();
+  await p.query('DELETE FROM heroes');
   await p.query('DELETE FROM cnpj_cache');
   await p.query('DELETE FROM push_subscriptions');
   await p.query('DELETE FROM psel_interview_evaluations');
@@ -1290,6 +1291,63 @@ async function uploadProjectStageFile(
   return filePath;
 }
 
+export interface CreatedHero {
+  id: string;
+  user_id: string;
+  phrase: string;
+  contributions: string;
+  start_year: number;
+  end_year: number;
+  photo_path: string;
+}
+
+async function createHero({
+  user_id,
+  phrase = 'Fez a diferença em tudo que tocou.',
+  contributions = ['Contribuição de teste'],
+  start_year = 2020,
+  end_year = 2023,
+  photo_path,
+}: {
+  user_id: string;
+  phrase?: string;
+  contributions?: string[];
+  start_year?: number;
+  end_year?: number;
+  photo_path: string;
+}): Promise<CreatedHero> {
+  const { rows } = await getPool().query<CreatedHero>(
+    `INSERT INTO heroes (user_id, phrase, contributions, start_year, end_year, photo_path)
+     VALUES ($1, $2, $3, $4, $5, $6)
+     RETURNING id, user_id, phrase, contributions, start_year, end_year, photo_path`,
+    [
+      user_id,
+      phrase,
+      contributions.join(', '),
+      start_year,
+      end_year,
+      photo_path,
+    ],
+  );
+  return rows[0];
+}
+
+async function uploadHeroPhoto(
+  userId: string,
+  filename: string,
+): Promise<string> {
+  const filePath = `heroes/${userId}/${filename}`;
+  const { error } = await getSupabase()
+    .storage.from('hero-photos')
+    .upload(filePath, Buffer.from('foto de teste'), {
+      upsert: true,
+      contentType: 'text/plain',
+    });
+
+  if (error) throw new Error(`Storage upload failed: ${error.message}`);
+  return filePath;
+}
+
 async function deleteAllEmails() {
   await fetch(`${emailHttpUrl}/messages`, {
     method: 'DELETE',
@@ -1369,6 +1427,8 @@ export default {
       createProjectReview,
       createProjectFeedback,
       uploadProjectStageFile,
+      createHero,
+      uploadHeroPhoto,
     },
   },
   email: {
