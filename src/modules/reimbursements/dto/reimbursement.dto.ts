@@ -40,8 +40,20 @@ export class CreateReimbursementDto extends createZodDto(
 export const updateReimbursementStatusSchema = z
   .object({
     status: z.enum(['approved', 'rejected']),
+    account_id: z.string().guid().optional(),
+    paid_amount_cents: z.number().int().positive().optional(),
+    partial_reason: z.string().min(1).optional(),
   })
-  .meta({ example: { status: 'approved' } });
+  .refine((data) => data.status !== 'approved' || !!data.account_id, {
+    message: 'account_id é obrigatório ao aprovar um reembolso',
+    path: ['account_id'],
+  })
+  .meta({
+    example: {
+      status: 'approved',
+      account_id: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
+    },
+  });
 
 export class UpdateReimbursementStatusDto extends createZodDto(
   updateReimbursementStatusSchema,
@@ -64,6 +76,8 @@ export interface ReimbursementRow {
   category: (typeof REIMBURSEMENT_CATEGORIES)[number];
   pix_key: string;
   status: 'pending' | 'approved' | 'rejected';
+  paid_amount_cents: number | null;
+  partial_reason: string | null;
   created_at: Date;
   updated_at: Date;
 }

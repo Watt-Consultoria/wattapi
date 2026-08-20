@@ -37,6 +37,7 @@
 - [Gamification](#gamification)
 - [Processo Seletivo](#processo-seletivo)
 - [Projects](#projects)
+- [Wallet](#wallet)
 
 ---
 
@@ -932,6 +933,8 @@ O frontend deve fazer upload dos comprovantes ao bucket `reimbursement-receipts`
   "category": "ingresso",
   "pix_key": "joao@empresa.com",
   "status": "pending",
+  "paid_amount_cents": null,
+  "partial_reason": null,
   "attachments": [
     { "id": "uuid", "name": "nota.pdf", "signed_url": "https://..." }
   ],
@@ -939,6 +942,8 @@ O frontend deve fazer upload dos comprovantes ao bucket `reimbursement-receipts`
   "updated_at": "..."
 }
 ```
+
+> `paid_amount_cents` e `partial_reason` são `null` até o reembolso ser aprovado. Após aprovação, `paid_amount_cents` sempre reflete o valor efetivamente pago (igual a `amount_cents` numa aprovação total, ou menor numa aprovação parcial); `partial_reason` só é preenchido quando o valor pago é menor que `amount_cents`.
 
 > `signed_url` dos attachments tem validade de 1 hora. O `path` de storage não é exposto.
 
@@ -1021,7 +1026,7 @@ Retorna todas as solicitações de um usuário específico. Exclusivo para super
 
 ### `PATCH /reimbursements/:id/status`
 
-Aprova ou rejeita uma solicitação pendente. Status é one-way: uma vez resolvido, não pode ser alterado.
+Aprova ou rejeita uma solicitação pendente. Status é one-way: uma vez resolvido, não pode ser alterado. Ao aprovar, o backend cria atomicamente uma transação de despesa (`expense`) na conta informada e debita o saldo dela pelo valor efetivamente pago.
 
 **Auth:** Obrigatória — rank ≥ 4 (`presidente`)
 
@@ -1031,22 +1036,42 @@ Aprova ou rejeita uma solicitação pendente. Status é one-way: uma vez resolvi
 |-----------|------|-----------|
 | `id` | UUID | ID do reembolso |
 
-**Body**
+**Body — aprovação total**
 
 ```json
-{ "status": "approved" }
+{ "status": "approved", "account_id": "uuid" }
 ```
 
-| Campo | Valores |
-|-------|---------|
-| `status` | `approved`, `rejected` (`pending` não é permitido) |
+**Body — aprovação parcial**
+
+```json
+{
+  "status": "approved",
+  "account_id": "uuid",
+  "paid_amount_cents": 10000,
+  "partial_reason": "Nota fiscal cobria apenas parte do valor solicitado"
+}
+```
+
+**Body — rejeição**
+
+```json
+{ "status": "rejected" }
+```
+
+| Campo | Tipo | Obrigatório | Descrição |
+|-------|------|-------------|-----------|
+| `status` | enum | Sim | `approved`, `rejected` (`pending` não é permitido) |
+| `account_id` | UUID | Sim quando `status = 'approved'` | Conta wallet que paga o reembolso; ignorado/não usado em `rejected` |
+| `paid_amount_cents` | integer | Não | Só válido quando `status = 'approved'`. Valor efetivamente pago; deve ser `> 0` e `<= amount_cents`. Omitido = paga o valor cheio (`amount_cents`) |
+| `partial_reason` | string | Sim quando `paid_amount_cents < amount_cents` | Justificativa do pagamento parcial |
 
 **Respostas**
-- `200` — Reembolso atualizado (shape de reembolso)
-- `400` — `status` inválido, ou reembolso já resolvido
+- `200` — Reembolso atualizado (shape de reembolso), com `paid_amount_cents`/`partial_reason` preenchidos quando aprovado
+- `400` — `status` inválido, reembolso já resolvido, `account_id` ausente na aprovação, `paid_amount_cents` fora do intervalo `(0, amount_cents]`, ou `paid_amount_cents < amount_cents` sem `partial_reason`
 - `401` — Token ausente, inválido ou expirado
 - `403` — Requer rank ≥ 4
-- `404` — Reembolso não encontrado
+- `404` — Reembolso não encontrado, ou `account_id` não corresponde a nenhuma conta wallet
 
 ---
 
@@ -3483,3 +3508,188 @@ Lista os ids de todos os projetos `finalizado` onde o consultor autenticado tem 
 - `200` — `{ pending_feedbacks: string[] }` (array vazio se não houver nada pendente)
 - `401` — Sem token
 - `403` — Requisitante não é `consultor`
+
+---
+
+## Wallet
+
+Contas e transações financeiras internas (Carteira Watt). Criar contas/transações é exclusivo do Presidente Executivo (rank > 3); listar é liberado para Diretor e acima (rank >= 2). A aprovação de reembolsos (`PATCH /reimbursements/:id/status`) também gera transações aqui — veja a seção [Reimbursements](#reimbursements).
+
+**Shape de conta:**
+
+```json
+{
+  "id": "uuid",
+  "name": "Conta Corrente Watt",
+  "type": "checking",
+  "balance_cents": 150000,
+  "created_by": "uuid",
+  "created_at": "...",
+  "updated_at": "..."
+}
+```
+
+**Shape de transação:**
+
+```json
+{
+  "id": "uuid",
+  "account_id": "uuid",
+  "type": "expense",
+  "amount_cents": 5000,
+  "category": "outro",
+  "description": "Compra de material de escritório",
+  "transaction_date": "2026-01-01",
+  "created_by": "uuid",
+  "created_at": "..."
+}
+```
+
+> `amount_cents` de uma transação é sempre positivo; `type` determina o sinal aplicado ao saldo da conta (`income` soma, `expense` subtrai). Não há checagem de saldo mínimo — o saldo pode ficar negativo.
+
+---
+
+### `POST /wallet/accounts`
+
+Cria uma nova conta wallet.
+
+**Auth:** Obrigatória — rank > 3 (`presidente`)
+
+**Body**
+
+```json
+{ "name": "Conta Corrente Watt", "type": "checking", "balance_cents": 0 }
+```
+
+| Campo | Tipo | Obrigatório | Descrição |
+|-------|------|-------------|-----------|
+| `name` | string | Sim | Mínimo 1 caractere |
+| `type` | enum | Sim | `checking`, `savings`, `credit_card`, `investment`, `cash` |
+| `balance_cents` | integer | Não | Saldo inicial em centavos; padrão `0` |
+
+**Respostas**
+- `201` — Conta criada (shape de conta)
+- `400` — Campos inválidos ou `type` fora do enum
+- `401` — Token ausente, inválido ou expirado
+- `403` — Requer rank > 3
+
+---
+
+### `PATCH /wallet/accounts/:id`
+
+Atualiza `name` e/ou `type` de uma conta existente. Não altera `balance_cents` diretamente — o saldo só muda através de transações.
+
+**Auth:** Obrigatória — rank > 3 (`presidente`)
+
+**Path params**
+
+| Parâmetro | Tipo | Descrição |
+|-----------|------|-----------|
+| `id` | UUID | ID da conta |
+
+**Body**
+
+```json
+{ "name": "Conta Corrente Watt Renomeada" }
+```
+
+| Campo | Tipo | Obrigatório | Descrição |
+|-------|------|-------------|-----------|
+| `name` | string | Não | Ao menos um dos dois campos deve ser informado |
+| `type` | enum | Não | `checking`, `savings`, `credit_card`, `investment`, `cash` |
+
+**Respostas**
+- `200` — Conta atualizada (shape de conta)
+- `400` — `type` inválido ou nenhum campo informado
+- `401` — Token ausente, inválido ou expirado
+- `403` — Requer rank > 3
+- `404` — Conta não encontrada
+
+---
+
+### `GET /wallet/accounts`
+
+Lista todas as contas wallet.
+
+**Auth:** Obrigatória — rank >= 2 (`diretor`, `assessor`, `presidente`)
+
+**Respostas**
+- `200` — Array de contas (shape de conta), incluindo `balance_cents` atual de cada uma
+- `401` — Token ausente, inválido ou expirado
+- `403` — Requer rank >= 2
+
+---
+
+### `GET /wallet/accounts/:id`
+
+Retorna uma conta específica.
+
+**Auth:** Obrigatória — rank >= 2 (`diretor`, `assessor`, `presidente`)
+
+**Path params**
+
+| Parâmetro | Tipo | Descrição |
+|-----------|------|-----------|
+| `id` | UUID | ID da conta |
+
+**Respostas**
+- `200` — Conta (shape de conta)
+- `401` — Token ausente, inválido ou expirado
+- `403` — Requer rank >= 2
+- `404` — Conta não encontrada
+
+---
+
+### `POST /wallet/transactions`
+
+Cria uma transação em uma conta e aplica o delta ao seu `balance_cents` (`income` soma, `expense` subtrai).
+
+**Auth:** Obrigatória — rank > 3 (`presidente`)
+
+**Body**
+
+```json
+{
+  "account_id": "uuid",
+  "type": "expense",
+  "amount_cents": 5000,
+  "category": "outro",
+  "description": "Compra de material de escritório",
+  "transaction_date": "2026-01-01"
+}
+```
+
+| Campo | Tipo | Obrigatório | Descrição |
+|-------|------|-------------|-----------|
+| `account_id` | UUID | Sim | Conta wallet a ser debitada/creditada |
+| `type` | enum | Sim | `income`, `expense` |
+| `amount_cents` | integer | Sim | Valor em centavos, deve ser positivo |
+| `category` | enum | Sim | `ingresso`, `alimentação`, `transporte`, `equipamento`, `outro` (mesmo enum de `reimbursements`) |
+| `description` | string | Sim | Mínimo 1 caractere |
+| `transaction_date` | string | Sim | Data no formato `YYYY-MM-DD` |
+
+**Respostas**
+- `201` — Transação criada (shape de transação); `balance_cents` da conta já reflete o delta
+- `400` — Campos inválidos, `type`/`category` fora do enum, ou `amount_cents <= 0`
+- `401` — Token ausente, inválido ou expirado
+- `403` — Requer rank > 3
+- `404` — `account_id` não corresponde a nenhuma conta wallet
+
+---
+
+### `GET /wallet/transactions`
+
+Lista transações, opcionalmente filtradas por conta.
+
+**Auth:** Obrigatória — rank >= 2 (`diretor`, `assessor`, `presidente`)
+
+**Query params**
+
+| Parâmetro | Tipo | Descrição |
+|-----------|------|-----------|
+| `account_id` | UUID | Opcional; filtra transações de uma única conta |
+
+**Respostas**
+- `200` — Array de transações (shape de transação)
+- `401` — Token ausente, inválido ou expirado
+- `403` — Requer rank >= 2
