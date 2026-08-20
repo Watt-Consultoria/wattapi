@@ -73,7 +73,8 @@ export class ReimbursementsController {
   updateStatus(
     @Param('id') id: string,
     @Body() body: UpdateReimbursementStatusDto,
+    @Req() req: AuthRequest,
   ): Promise<ReimbursementResponse> {
-    return this.reimbursementsService.updateStatus(id, body);
+    return this.reimbursementsService.updateStatus(id, req.jwtData.sub, body);
   }
 }

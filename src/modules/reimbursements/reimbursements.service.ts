@@ -123,6 +123,7 @@ export class ReimbursementsService {
 
   async updateStatus(
     id: string,
+    approverId: string,
     dto: UpdateReimbursementStatusDto,
   ): Promise<ReimbursementResponse> {
     const found = await this.db.query<ReimbursementRow>(
@@ -134,14 +135,77 @@ export class ReimbursementsService {
       throw new NotFoundException(`Reimbursement ${id} not found`);
     }
 
-    if (found.rows[0].status !== 'pending') {
+    const reimbursement = found.rows[0];
+
+    if (reimbursement.status !== 'pending') {
       throw new BadRequestException('Reimbursement status is already resolved');
     }
 
-    const { rows } = await this.db.query<ReimbursementRow>(
-      `UPDATE reimbursements SET status = $1, updated_at = now() WHERE id = $2 RETURNING *`,
-      [dto.status, id],
-    );
+    const updated = await this.db.withTransaction(async (client) => {
+      let paidAmountCents: number | null = null;
+      let partialReason: string | null = null;
+
+      if (dto.status === 'approved') {
+        const payout = dto.paid_amount_cents ?? reimbursement.amount_cents;
+
+        if (payout <= 0 || payout > reimbursement.amount_cents) {
+          throw new BadRequestException(
+            'paid_amount_cents deve ser positivo e não pode exceder o valor solicitado',
+          );
+        }
+
+        const isPartial = payout < reimbursement.amount_cents;
+        if (isPartial && !dto.partial_reason) {
+          throw new BadRequestException(
+            'partial_reason é obrigatório quando o valor pago é menor que o valor solicitado',
+          );
+        }
+
+        const account = await client.query(
+          `SELECT id FROM wallet_accounts WHERE id = $1`,
+          [dto.account_id],
+        );
+        if (account.rows.length === 0) {
+          throw new NotFoundException(
+            `Wallet account ${dto.account_id} not found`,
+          );
+        }
+
+        paidAmountCents = payout;
+        partialReason = dto.partial_reason ?? null;
+
+        const baseDescription = `Reembolso aprovado: ${reimbursement.title} (${reimbursement.id})`;
+        const description = isPartial
+          ? `${baseDescription} (parcial)`
+          : baseDescription;
+
+        await client.query(
+          `INSERT INTO wallet_transactions (account_id, type, amount_cents, category, description, transaction_date, created_by)
+           VALUES ($1, 'expense', $2, $3, $4, CURRENT_DATE, $5)`,
+          [
+            dto.account_id,
+            payout,
+            reimbursement.category,
+            description,
+            approverId,
+          ],
+        );
+
+        await client.query(
+          `UPDATE wallet_accounts SET balance_cents = balance_cents - $1, updated_at = now() WHERE id = $2`,
+          [payout, dto.account_id],
+        );
+      }
+
+      const { rows } = await client.query<ReimbursementRow>(
+        `UPDATE reimbursements
+         SET status = $1, paid_amount_cents = $2, partial_reason = $3, updated_at = now()
+         WHERE id = $4
+         RETURNING *`,
+        [dto.status, paidAmountCents, partialReason, id],
+      );
+      return rows[0];
+    });
 
     const attResult = await this.db.query<ReimbursementAttachmentRow>(
       `SELECT * FROM reimbursement_attachments WHERE reimbursement_id = $1`,
@@ -149,7 +213,7 @@ export class ReimbursementsService {
     );
 
     const [response] = await this.withSignedUrls([
-      { ...rows[0], attachments: attResult.rows },
+      { ...updated, attachments: attResult.rows },
     ]);
     return response;
   }
@@ -161,7 +225,8 @@ export class ReimbursementsService {
     const sql = `
       SELECT
         r.id, r.user_id, r.title, r.description, r.amount_cents,
-        r.category, r.pix_key, r.status, r.created_at, r.updated_at,
+        r.category, r.pix_key, r.status, r.paid_amount_cents, r.partial_reason,
+        r.created_at, r.updated_at,
         ra.id AS att_id, ra.path AS att_path, ra.name AS att_name,
         ra.created_at AS att_created_at
       FROM reimbursements r
@@ -184,6 +249,8 @@ export class ReimbursementsService {
           category: row.category,
           pix_key: row.pix_key,
           status: row.status,
+          paid_amount_cents: row.paid_amount_cents,
+          partial_reason: row.partial_reason,
           created_at: row.created_at,
           updated_at: row.updated_at,
           attachments: [],
@@ -230,6 +297,8 @@ export class ReimbursementsService {
           category: r.category,
           pix_key: r.pix_key,
           status: r.status,
+          paid_amount_cents: r.paid_amount_cents,
+          partial_reason: r.partial_reason,
           attachments,
           created_at: r.created_at.toISOString(),
           updated_at: r.updated_at.toISOString(),
