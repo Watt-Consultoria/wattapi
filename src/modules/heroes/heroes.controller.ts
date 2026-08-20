@@ -36,14 +36,14 @@ export class HeroesController {
   }
 
   @Get()
-  @RoutePolicy({ access: { mode: 'authenticated' } })
+  @RoutePolicy({ access: { mode: 'unauthenticated' } })
   @ApiResponse({ status: 200, type: [HeroResponseDto] })
   findAll(): Promise<HeroResponse[]> {
     return this.heroesService.findAll();
   }
 
   @Get(':id')
-  @RoutePolicy({ access: { mode: 'authenticated' } })
+  @RoutePolicy({ access: { mode: 'unauthenticated' } })
   @ApiResponse({ status: 200, type: HeroResponseDto })
   findOne(@Param('id') id: string): Promise<HeroResponse> {
     return this.heroesService.findOne(id);

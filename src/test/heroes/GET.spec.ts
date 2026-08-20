@@ -140,9 +140,17 @@ describe('GET /heroes', () => {
   });
 
   describe('Unauthenticated user', () => {
-    test('Attempting to list heroes without a token', async () => {
+    test('Listing heroes without a token', async () => {
+      const { hero, candidate } = await seedHero('unauthenticated');
+
       const response = await fetch(BASE_URL);
-      expect(response.status).toBe(401);
+      const body = (await response.json()) as HeroResponse[];
+
+      expect(response.status).toBe(200);
+      expect(Array.isArray(body)).toBe(true);
+      const found = body.find((h) => h.id === hero.id);
+      expect(found).toBeDefined();
+      expect(found?.name).toBe(candidate.name);
     });
   });
 });
@@ -263,11 +271,22 @@ describe('GET /heroes/:id', () => {
   });
 
   describe('Unauthenticated user', () => {
-    test('Attempting to retrieve a hero without a token', async () => {
+    test('Retrieving an existing hero without a token', async () => {
+      const { hero, candidate } = await seedHero('getone.unauthenticated');
+
+      const response = await fetch(`${BASE_URL}/${hero.id}`);
+      const body = (await response.json()) as HeroResponse;
+
+      expect(response.status).toBe(200);
+      expect(body.id).toBe(hero.id);
+      expect(body.name).toBe(candidate.name);
+    });
+
+    test('Attempting to retrieve a non-existent hero without a token', async () => {
       const response = await fetch(
         `${BASE_URL}/00000000-0000-0000-0000-000000000001`,
       );
-      expect(response.status).toBe(401);
+      expect(response.status).toBe(404);
     });
   });
 });

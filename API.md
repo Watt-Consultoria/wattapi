@@ -3597,11 +3597,10 @@ Cria um hero a partir de um usuário inativo.
 
 Lista todos os heróis, ordenados por `created_at DESC`.
 
-**Auth:** Obrigatória — qualquer rank
+**Auth:** Não requerida (rota pública)
 
 **Respostas**
 - `200` — Array de heróis (shape de hero)
-- `401` — Token ausente, inválido ou expirado
 
 ---
 
@@ -3609,7 +3608,7 @@ Lista todos os heróis, ordenados por `created_at DESC`.
 
 Retorna um hero específico.
 
-**Auth:** Obrigatória — qualquer rank
+**Auth:** Não requerida (rota pública)
 
 **Path params**
 
@@ -3619,7 +3618,6 @@ Retorna um hero específico.
 
 **Respostas**
 - `200` — Hero (shape de hero)
-- `401` — Token ausente, inválido ou expirado
 - `404` — Hero não encontrado
 
 ---
