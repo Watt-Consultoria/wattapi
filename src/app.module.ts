@@ -26,6 +26,7 @@ import { DocsModule } from './modules/docs/docs.module';
 import { ProjectsModule } from './modules/projects/projects.module';
 import { HeroesModule } from './modules/heroes/heroes.module';
 import { WalletModule } from './modules/wallet/wallet.module';
+import { AlmoxarifadoModule } from './modules/almoxarifado/almoxarifado.module';
 import { JwtGuard } from './common/guards/jwt.guard';
 
 @Module({
@@ -56,6 +57,7 @@ import { JwtGuard } from './common/guards/jwt.guard';
     ProjectsModule,
     HeroesModule,
     WalletModule,
+    AlmoxarifadoModule,
   ],
   providers: [
     {

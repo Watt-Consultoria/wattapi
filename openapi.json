@@ -4620,6 +4620,228 @@
           }
         ]
       }
+    },
+    "/almoxarifado/material": {
+      "get": {
+        "operationId": "AlmoxarifadoMaterialController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AlmoxarifadoMaterialResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "AlmoxarifadoMaterial"
+        ],
+        "description": "Requer autenticação.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "post": {
+        "operationId": "AlmoxarifadoMaterialController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAlmoxarifadoMaterialDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlmoxarifadoMaterialResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "AlmoxarifadoMaterial"
+        ],
+        "description": "Requer autenticação. Restrito a: role: gerente, diretor, assessor, presidente.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/almoxarifado/material/{id}": {
+      "patch": {
+        "operationId": "AlmoxarifadoMaterialController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAlmoxarifadoMaterialDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlmoxarifadoMaterialResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "AlmoxarifadoMaterial"
+        ],
+        "description": "Requer autenticação. Restrito a: role: gerente, diretor, assessor, presidente.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/almoxarifado/emprestimos": {
+      "get": {
+        "operationId": "AlmoxarifadoEmprestimoController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AlmoxarifadoEmprestimoResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "AlmoxarifadoEmprestimo"
+        ],
+        "description": "Requer autenticação.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "post": {
+        "operationId": "AlmoxarifadoEmprestimoController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAlmoxarifadoEmprestimoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlmoxarifadoEmprestimoResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "AlmoxarifadoEmprestimo"
+        ],
+        "description": "Requer autenticação.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/almoxarifado/emprestimos/{id}": {
+      "patch": {
+        "operationId": "AlmoxarifadoEmprestimoController_returnLoan",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReturnAlmoxarifadoEmprestimoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlmoxarifadoEmprestimoResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "AlmoxarifadoEmprestimo"
+        ],
+        "description": "Requer autenticação.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
     }
   },
   "info": {
@@ -7325,13 +7547,18 @@
         "properties": {
           "notifications_created": {
             "type": "number"
+          },
+          "almoxarifado_overdue_notifications_created": {
+            "type": "number"
           }
         },
         "required": [
-          "notifications_created"
+          "notifications_created",
+          "almoxarifado_overdue_notifications_created"
         ],
         "example": {
-          "notifications_created": 5
+          "notifications_created": 5,
+          "almoxarifado_overdue_notifications_created": 3
         }
       },
       "HouseResponseDto": {
@@ -10058,6 +10285,217 @@
           "transaction_date": "2026-01-01",
           "created_by": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
           "created_at": "2026-01-01T00:00:00.000Z"
+        }
+      },
+      "AlmoxarifadoMaterialResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "descricao": {
+            "type": "string"
+          },
+          "quantidade_estoque": {
+            "type": "number"
+          },
+          "observacoes": {
+            "type": "string",
+            "nullable": true
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "descricao",
+          "quantidade_estoque",
+          "observacoes",
+          "created_at",
+          "updated_at"
+        ],
+        "example": {
+          "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+          "nome": "Furadeira de Impacto",
+          "descricao": "Furadeira de impacto Bosch 750W",
+          "quantidade_estoque": 5,
+          "observacoes": "Em bom estado",
+          "created_at": "2026-01-01T00:00:00.000Z",
+          "updated_at": "2026-01-01T00:00:00.000Z"
+        }
+      },
+      "CreateAlmoxarifadoMaterialDto": {
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string",
+            "minLength": 1
+          },
+          "descricao": {
+            "type": "string",
+            "minLength": 1
+          },
+          "quantidade_estoque": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "observacoes": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "nome",
+          "descricao",
+          "quantidade_estoque"
+        ],
+        "example": {
+          "nome": "Furadeira de Impacto",
+          "descricao": "Furadeira de impacto Bosch 750W",
+          "quantidade_estoque": 5,
+          "observacoes": "Em bom estado"
+        }
+      },
+      "UpdateAlmoxarifadoMaterialDto": {
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string",
+            "minLength": 1
+          },
+          "descricao": {
+            "type": "string",
+            "minLength": 1
+          },
+          "quantidade_estoque": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "observacoes": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "example": {
+          "quantidade_estoque": 8
+        }
+      },
+      "AlmoxarifadoEmprestimoResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "material_id": {
+            "type": "string"
+          },
+          "quantidade": {
+            "type": "number"
+          },
+          "user_id": {
+            "type": "string"
+          },
+          "emprestado_em": {
+            "type": "string"
+          },
+          "previsao_devolucao": {
+            "type": "string"
+          },
+          "devolvido_em": {
+            "type": "string",
+            "nullable": true
+          },
+          "observacoes": {
+            "type": "string",
+            "nullable": true
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "material_id",
+          "quantidade",
+          "user_id",
+          "emprestado_em",
+          "previsao_devolucao",
+          "devolvido_em",
+          "observacoes",
+          "created_at",
+          "updated_at"
+        ],
+        "example": {
+          "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+          "material_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+          "quantidade": 1,
+          "user_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+          "emprestado_em": "2026-01-01T00:00:00.000Z",
+          "previsao_devolucao": "2026-02-01T18:00:00.000Z",
+          "devolvido_em": null,
+          "observacoes": "Para uso na obra X",
+          "created_at": "2026-01-01T00:00:00.000Z",
+          "updated_at": "2026-01-01T00:00:00.000Z"
+        }
+      },
+      "CreateAlmoxarifadoEmprestimoDto": {
+        "type": "object",
+        "properties": {
+          "material_id": {
+            "type": "string"
+          },
+          "quantidade": {
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991,
+            "minimum": 0
+          },
+          "previsao_devolucao": {
+            "type": "string"
+          },
+          "observacoes": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "material_id",
+          "quantidade",
+          "previsao_devolucao"
+        ],
+        "example": {
+          "material_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+          "quantidade": 1,
+          "previsao_devolucao": "2026-02-01T18:00:00.000Z",
+          "observacoes": "Para uso na obra X"
+        }
+      },
+      "ReturnAlmoxarifadoEmprestimoDto": {
+        "type": "object",
+        "properties": {
+          "devolvido_em": {
+            "type": "string"
+          },
+          "observacoes": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "example": {
+          "observacoes": "Devolvido em bom estado"
         }
       }
     }

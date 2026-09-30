@@ -22,8 +22,14 @@ export type WeeklyJobResult = z.infer<typeof weeklyJobResultSchema>;
 export const dailyJobResultSchema = z
   .object({
     notifications_created: z.number(),
+    almoxarifado_overdue_notifications_created: z.number(),
   })
-  .meta({ example: { notifications_created: 5 } });
+  .meta({
+    example: {
+      notifications_created: 5,
+      almoxarifado_overdue_notifications_created: 3,
+    },
+  });
 
 export class DailyJobResultDto extends createZodDto(dailyJobResultSchema) {}
 
