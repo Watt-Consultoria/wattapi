@@ -99,6 +99,8 @@ async function clearDatabase(): Promise<void> {
   await p.query('DELETE FROM member_violations');
   await p.query('DELETE FROM company_norms');
   await p.query('DELETE FROM internal_job_runs');
+  await p.query('DELETE FROM almoxarifado_emprestimos');
+  await p.query('DELETE FROM almoxarifado_materiais');
   await p.query('DELETE FROM users');
   await p.query('DELETE FROM auth.users');
 }
@@ -841,6 +843,26 @@ async function waitForLastEmail(
   return null;
 }
 
+// Email sends are fire-and-forget in the app (the HTTP response does not wait
+// for them), so tests that assert on multiple recipients must poll for the
+// specific addresses they expect instead of sleeping a fixed duration and
+// reading whatever happens to be in the mailcatcher inbox at that moment.
+async function waitForEmailsTo(
+  recipients: string[],
+  maxWait = 3000,
+): Promise<MailcatcherMessage[]> {
+  const start = Date.now();
+  while (Date.now() - start < maxWait) {
+    const emails = await getAllEmails();
+    const allRecipients = emails.flatMap((e) => e.recipients);
+    if (recipients.every((r) => allRecipients.includes(r))) {
+      return emails;
+    }
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  return getAllEmails();
+}
+
 async function uploadFile(userId: string, filename: string): Promise<string> {
   const filePath = `receipts/${userId}/${filename}`;
   const { error } = await getSupabase()
@@ -1424,6 +1446,82 @@ async function uploadHeroPhoto(
   return filePath;
 }
 
+export interface CreatedAlmoxarifadoMaterial {
+  id: string;
+  nome: string;
+  descricao: string;
+  quantidade_estoque: number;
+  observacoes: string | null;
+}
+
+async function createAlmoxarifadoMaterial({
+  nome = 'Material de Teste',
+  descricao = 'Descrição do material de teste',
+  quantidade_estoque = 10,
+  observacoes = null,
+}: {
+  nome?: string;
+  descricao?: string;
+  quantidade_estoque?: number;
+  observacoes?: string | null;
+} = {}): Promise<CreatedAlmoxarifadoMaterial> {
+  const { rows } = await getPool().query<CreatedAlmoxarifadoMaterial>(
+    `INSERT INTO almoxarifado_materiais (nome, descricao, quantidade_estoque, observacoes)
+     VALUES ($1, $2, $3, $4)
+     RETURNING id, nome, descricao, quantidade_estoque, observacoes`,
+    [nome, descricao, quantidade_estoque, observacoes],
+  );
+  return rows[0];
+}
+
+export interface CreatedAlmoxarifadoEmprestimo {
+  id: string;
+  material_id: string;
+  quantidade: number;
+  user_id: string;
+  previsao_devolucao: Date;
+  devolvido_em: Date | null;
+  observacoes: string | null;
+  atraso_notificado_em: Date | null;
+}
+
+async function createAlmoxarifadoEmprestimo({
+  material_id,
+  user_id,
+  quantidade = 1,
+  previsao_devolucao = new Date(
+    Date.now() + 7 * 24 * 60 * 60 * 1000,
+  ).toISOString(),
+  observacoes = null,
+  devolvido_em = null,
+  atraso_notificado_em = null,
+}: {
+  material_id: string;
+  user_id: string;
+  quantidade?: number;
+  previsao_devolucao?: string;
+  observacoes?: string | null;
+  devolvido_em?: string | null;
+  atraso_notificado_em?: string | null;
+}): Promise<CreatedAlmoxarifadoEmprestimo> {
+  const { rows } = await getPool().query<CreatedAlmoxarifadoEmprestimo>(
+    `INSERT INTO almoxarifado_emprestimos
+       (material_id, quantidade, user_id, previsao_devolucao, observacoes, devolvido_em, atraso_notificado_em)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
+     RETURNING id, material_id, quantidade, user_id, previsao_devolucao, devolvido_em, observacoes, atraso_notificado_em`,
+    [
+      material_id,
+      quantidade,
+      user_id,
+      previsao_devolucao,
+      observacoes,
+      devolvido_em,
+      atraso_notificado_em,
+    ],
+  );
+  return rows[0];
+}
+
 async function deleteAllEmails() {
   await fetch(`${emailHttpUrl}/messages`, {
     method: 'DELETE',
@@ -1507,6 +1605,8 @@ export default {
       uploadProjectStageFile,
       createHero,
       uploadHeroPhoto,
+      createAlmoxarifadoMaterial,
+      createAlmoxarifadoEmprestimo,
     },
   },
   email: {
@@ -1514,5 +1614,6 @@ export default {
     getAllEmails,
     getLastEmail,
     waitForLastEmail,
+    waitForEmailsTo,
   },
 };

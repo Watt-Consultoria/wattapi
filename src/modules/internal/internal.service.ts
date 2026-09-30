@@ -189,10 +189,71 @@ export class InternalService {
 
     const notificationsCreated = parseInt(result.rows[0].count, 10);
 
+    const almoxarifadoOverdueNotificationsCreated =
+      await this.notifyOverdueAlmoxarifadoLoans();
+
     await this.db.query(
       `INSERT INTO internal_job_runs (job_name) VALUES ('daily-job')`,
     );
 
-    return { notifications_created: notificationsCreated };
+    return {
+      notifications_created: notificationsCreated,
+      almoxarifado_overdue_notifications_created:
+        almoxarifadoOverdueNotificationsCreated,
+    };
+  }
+
+  private async notifyOverdueAlmoxarifadoLoans(): Promise<number> {
+    const result = await this.db.query<{
+      borrower_count: string;
+      gerente_count: string;
+    }>(
+      `WITH overdue AS (
+         SELECT e.id AS emprestimo_id, e.user_id AS borrower_id, e.material_id,
+                m.nome AS material_nome, u.name AS borrower_name
+         FROM almoxarifado_emprestimos e
+         JOIN almoxarifado_materiais m ON m.id = e.material_id
+         JOIN users u ON u.id = e.user_id
+         WHERE e.devolvido_em IS NULL
+           AND e.previsao_devolucao < now()
+           AND e.atraso_notificado_em IS NULL
+       ),
+       gerentes AS (
+         SELECT id FROM users
+         WHERE role = 'gerente' AND sector = 'projetos' AND inactive = FALSE
+       ),
+       borrower_notifications AS (
+         INSERT INTO notifications (user_id, title, description, origin)
+         SELECT borrower_id,
+                'Você está com um item do almoxarifado em atraso: ' || material_nome,
+                NULL,
+                'automatic'
+         FROM overdue
+         RETURNING id
+       ),
+       gerente_notifications AS (
+         INSERT INTO notifications (user_id, title, description, origin)
+         SELECT g.id,
+                'Empréstimo em atraso: ' || o.material_nome || ' — responsável: ' || o.borrower_name,
+                NULL,
+                'automatic'
+         FROM overdue o
+         CROSS JOIN gerentes g
+         RETURNING id
+       ),
+       marked AS (
+         UPDATE almoxarifado_emprestimos e
+         SET atraso_notificado_em = now()
+         FROM overdue o
+         WHERE e.id = o.emprestimo_id
+         RETURNING e.id
+       )
+       SELECT
+         (SELECT COUNT(*) FROM borrower_notifications) AS borrower_count,
+         (SELECT COUNT(*) FROM gerente_notifications) AS gerente_count`,
+    );
+
+    const { borrower_count, gerente_count } = result.rows[0];
+    return parseInt(borrower_count, 10) + parseInt(gerente_count, 10);
   }
 }

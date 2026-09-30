@@ -215,11 +215,16 @@ describe('PATCH /selection-process/interviews', () => {
       });
       expect(response.status).toBe(200);
 
-      // Give async email/notification sends time to complete
-      await new Promise((r) => setTimeout(r, 500));
-
-      // Both consultants receive an email
-      const emails = await orchestrator.email.getAllEmails();
+      // Email sends are fire-and-forget (not awaited by the endpoint), so
+      // poll for the specific recipients instead of sleeping a fixed
+      // duration and reading whatever happens to be in the inbox — a fixed
+      // sleep races against SMTP delivery time and can also pick up
+      // still-arriving emails from earlier tests while missing this test's
+      // own not-yet-delivered ones.
+      const emails = await orchestrator.email.waitForEmailsTo([
+        consA.email,
+        consB.email,
+      ]);
       const allRecipients = emails.flatMap((e) => e.recipients);
       expect(allRecipients).toContain(consA.email);
       expect(allRecipients).toContain(consB.email);
